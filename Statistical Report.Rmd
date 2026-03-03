@@ -1,0 +1,104 @@
+---
+title: "Statistical Report"
+subtitle: "Determinants of Belgian Household Energy Consumption"
+
+author: |
+  GROUP 6:  
+  Morodoluwa Akin-Fajiye  
+  Samer Mheissen  
+  Blagovesta Hristoskova  
+  Jeffrey Nunoo  
+  Edoardo Pennesi  
+  Muthoni Wachira
+
+date: "`r Sys.Date()`"
+
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+fontsize: 11pt
+geometry: margin=1in
+header-includes:
+  - \usepackage{pdflscape}
+  - \usepackage{float}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
+
+# Libraries
+library(gridExtra)
+
+```
+
+\newpage
+
+# Background
+
+Brief intro and maybe literature review
+
+# Dataset and Variables
+
+# Descriptive Statistics
+
+## Categorical variables
+
+### Summary tables
+
+### Summary plots
+
+- box plots
+
+## Continuous variables
+
+### Summary tables
+
+### Summary plots
+
+- box plots,
+- correlation plots
+- scatter plots, 
+- QQ plots,
+
+# Inferential Statistics
+
+## Regression model
+
+## DAGs
+
+## Results table
+
+| Term | Estimate | Std. Error | t value | Pr(>|t|) | adjusted p |
+|------|----------|------------|---------|----------| ---------  |
+
+- VIF analysis
+- Cross validation analysis
+
+
+## Diagnostic plots
+
+- Residuals vs Fitted
+- Normal Q–Q Plot
+- Scale–Location Plot (Spread–Location)
+- Residuals vs Leverage
+- Influence (Cook’s Distance)
+
+## Contrast analysis
+
+- for research question 2 and 4
+
+# Conclusions
+
+## Research question 1
+
+## Research question 2
+
+## Research question 3
+
+## Research question 4
