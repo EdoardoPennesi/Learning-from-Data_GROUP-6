@@ -56,35 +56,23 @@ df_clean <- df_clean %>%
     filter(annual_kwh <= 18000)
 ```
 # Descriptive Statistics
-```{r}
-library(dplyr)
-
-numeric_vars <- df_clean %>%
-  select(annual_kwh, sq_meters, income_euro, occupancy_count, dist_to_brussels)
-
-numeric_summary <- numeric_vars %>%
-  summarise(
-    across(
-      everything(),
-      list(
-        mean = ~mean(. , na.rm = TRUE),
-        sd   = ~sd(. , na.rm = TRUE),
-        min  = ~min(. , na.rm = TRUE),
-        q1   = ~quantile(., 0.25, na.rm = TRUE),
-        median = ~median(. , na.rm = TRUE),
-        q3   = ~quantile(., 0.75, na.rm = TRUE),
-        max  = ~max(. , na.rm = TRUE)
-      ),
-      .names = "{.col}_{.fn}"
-    )
-  )
-
-numeric_summary
-```
-
 ## Categorical variables
-
 ### Summary tables
+
+These summary tables should help show if the EPC labels are balanced or skewed, if the building eras arw clustered within one period, if the roof colors or pet ownership categories have enough variation to be meaningful predictors. We can also sue them to investigate whether any category has very low counts, which can affect model stability.
+```{r}
+cat_summary <- bind_rows(
+  epc_summary         %>% mutate(variable = "EPC label"),
+  building_era_summary %>% mutate(variable = "Building era"),
+  roof_color_summary   %>% mutate(variable = "Roof color"),
+  pet_summary          %>% mutate(variable = "Pet ownership")
+) %>%
+  dplyr::select(variable, everything())
+
+cat_summary
+
+```
+Overall, the categorical variables show meaningful variation across categories. EPC labels are generally balanced across the different categories, indicating that extremely efficient or inefficient homes are not rare in this data. Building era and roof color are also evenly distributed while pet ownership is generally more common. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts.
 
 ### Summary plots
 
