@@ -60,7 +60,27 @@ df_clean <- df_clean %>%
 ### Summary tables
 
 These summary tables should help show if the EPC labels are balanced or skewed, if the building eras arw clustered within one period, if the roof colors or pet ownership categories have enough variation to be meaningful predictors. We can also sue them to investigate whether any category has very low counts, which can affect model stability.
+
+
 ```{r}
+# Create summary tables for categorical variables
+epc_summary <- df_clean %>%
+  count(epc_label) %>%
+  mutate(percent = round(n / sum(n) * 100, 1))
+
+building_era_summary <- df_clean %>%
+  count(building_era) %>%
+  mutate(percent = round(n / sum(n) * 100, 1))
+
+roof_color_summary <- df_clean %>%
+  count(roof_color) %>%
+  mutate(percent = round(n / sum(n) * 100, 1))
+
+pet_summary <- df_clean %>%
+  count(pet_ownership) %>%
+  mutate(percent = round(n / sum(n) * 100, 1))
+
+
 cat_summary <- bind_rows(
   epc_summary         %>% mutate(variable = "EPC label"),
   building_era_summary %>% mutate(variable = "Building era"),
