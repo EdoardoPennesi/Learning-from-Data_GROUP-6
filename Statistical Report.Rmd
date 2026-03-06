@@ -48,7 +48,8 @@ Brief intro and maybe literature review
 ## Data Cleaning
 ```{r}
 data.students <- read.table("data students.txt",header=TRUE,sep=";")
-df_clean <- data.students %>%
+df_clean <- data.students[-c(66, 36, 135), ]
+df_clean <- df_clean %>%
      filter(!is.na(epc_label) & !is.na(annual_kwh))
 head(df_clean[order(-df_clean$annual_kwh), ], 10)
 df_clean <- df_clean %>%
