@@ -34,6 +34,7 @@ knitr::opts_chunk$set(
 
 # Libraries
 library(gridExtra)
+library(dplyr)
 
 ```
 
@@ -44,7 +45,15 @@ library(gridExtra)
 Brief intro and maybe literature review
 
 # Dataset and Variables
-
+## Data Cleaning
+```{r}
+data.students <- read.table("data students.txt",header=TRUE,sep=";")
+df_clean <- data.students %>%
+     filter(!is.na(epc_label) & !is.na(annual_kwh))
+head(df_clean[order(-df_clean$annual_kwh), ], 10)
+df_clean <- df_clean %>%
+    filter(annual_kwh <= 18000)
+```
 # Descriptive Statistics
 
 ## Categorical variables
