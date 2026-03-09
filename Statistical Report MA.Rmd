@@ -35,6 +35,9 @@ knitr::opts_chunk$set(
 # Libraries
 library(gridExtra)
 library(dplyr)
+library(knitr)
+library(kableExtra)
+library(tidyr)
 
 ```
 
@@ -81,15 +84,16 @@ pet_summary <- df_clean %>%
   mutate(percent = round(n / sum(n) * 100, 1))
 
 
-cat_summary <- bind_rows(
-  epc_summary         %>% mutate(variable = "EPC label"),
-  building_era_summary %>% mutate(variable = "Building era"),
-  roof_color_summary   %>% mutate(variable = "Roof color"),
-  pet_summary          %>% mutate(variable = "Pet ownership")
-) %>%
-  dplyr::select(variable, everything())
+kable(epc_summary, caption = "EPC Label Distribution") %>% kable_styling()
+kable(building_era_summary, caption = "Building Era Distribution") %>% kable_styling()
+kable(roof_color_summary, caption = "Roof Color Distribution") %>% kable_styling()
+kable(pet_summary, caption = "Pet Ownership Distribution") %>% kable_styling()
 
-cat_summary
+crosscat <- df_clean %>%
+  count(epc_label, building_era, roof_color, pet_ownership) %>%
+  arrange(desc(n))
+
+crosscat
 
 ```
 Overall, the categorical variables show meaningful variation across categories. EPC labels are generally balanced across the different categories, indicating that extremely efficient or inefficient homes are not rare in this data. Building era and roof color are also evenly distributed while pet ownership is generally more common. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts.
