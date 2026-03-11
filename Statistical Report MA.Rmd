@@ -42,6 +42,7 @@ library(kableExtra)
 library(tidyr)
 library(tidyverse)
 library(ggplot2)
+library(corrplot)
 
 
 
@@ -63,7 +64,7 @@ with building characteristics (e.g. floor area, EPC label, construction era) and
 
 ## Data Cleaning
 
-After loading the data, three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values in the variables EPC label (`epc_label`) and annual household electricity consumption (`annual_kwh`) (none of the variables displayed missingness above 5\%). This step ensures that the analysis is conducted only on complete cases for the key variables of interest. To inspect the distribution of electricity consumption and identify potential extreme values, the observations were sorted in decreasing order of annual electricity consumption (`annual_kwh`). Five observations (row 267, 1330, 1570, 369, 12) were two orders of magnitude larger than the others (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error. 
+After loading the data, three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values in the variables EPC label (`epc_label`) and annual household electricity consumption (`annual_kwh`) (none of the variables displayed missingness above 5\%). This step ensures that the analysis is conducted only on complete cases for the key variables of interest. Missing values in other variables were retained (see appendix) without imputation. To inspect the distribution of electricity consumption and identify potential extreme values, the observations were sorted in decreasing order of annual electricity consumption (`annual_kwh`). Five observations (row 267, 1330, 1570, 369, 12) were two orders of magnitude larger than the others (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error. 
 
 ```{r, echo=FALSE, include=FALSE, warning=F, message=F}
 data.students <- read.table("data_students.txt",header=TRUE,sep=";")
@@ -123,11 +124,12 @@ kable(data_dict, caption = "Data Dictionary") %>%
 
 ## Categorical variables
 
+The distribution of EPC labels is relatively balanced across categories. Labels A (22.2%) and C (21.3%) are the most common, followed by B (17.6%) and D (15.7%). Lower-efficiency categories E occur less frequently, 13.6% and F 9.6% respectively. Buildings constructed between 1970 and 2000 represent 34.4% of the sample, pre-1970 buildings account for 33.1%, and post-2000 buildings make up 32.6%. Occupancy count goes from 1 to 7 with all counts accounting approximately 14-15%. Red roofs are the most common (35.2%), followed closely by black roofs (33.3%) and other colors (31.5%). Almost one in four (39.6%) owners has a pet, while 60.4% does not. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts. Overall, the categorical variables show meaningful variation across categories. EPC labels are generally balanced across the different categories, indicating that extremely efficient or inefficient homes are not rare in this data. Building era and roof color are also evenly distributed while pet ownership is generally more common.
+
+*Edo's comment: i think the sentence below can be replaced by the actual description as in the paragraph above and tables will go in the appendix*
+These summary tables should help show if the EPC labels are balanced or skewed, if the building eras arw clustered within one period, if the roof colours or pet ownership categories have enough variation to be meaningful predictors. We can also sue them to investigate whether any category has very low counts, which can affect model stability.
+
 ### Summary tables
-
-These summary tables should help show if the EPC labels are balanced or skewed, if the building eras arw clustered within one period, if the roof colors or pet ownership categories have enough variation to be meaningful predictors. We can also sue them to investigate whether any category has very low counts, which can affect model stability.
-
-
 ```{r echo=FALSE, warning=F, message=F}
 # Create summary tables for categorical variables
 epc_summary <- df_clean %>%
@@ -146,11 +148,16 @@ pet_summary <- df_clean %>%
   count(pet_ownership) %>%
   mutate(percent = round(n / sum(n) * 100, 1))
 
+occupancy_count <- df_clean %>%
+  count(occupancy_count) %>%
+  mutate(percent = round(n / sum(n) * 100, 1))
+
 
 kable(epc_summary, caption = "EPC Label Distribution") %>% kable_styling()
 kable(building_era_summary, caption = "Building Era Distribution") %>% kable_styling()
 kable(roof_color_summary, caption = "Roof Color Distribution") %>% kable_styling()
 kable(pet_summary, caption = "Pet Ownership Distribution") %>% kable_styling()
+kable(occupancy_count, caption = "Occupancy Count Distribution") %>% kable_styling()
 
 #crosscat <- df_clean %>%
   #count(epc_label, building_era, roof_color, pet_ownership) %>%
@@ -160,14 +167,13 @@ kable(pet_summary, caption = "Pet Ownership Distribution") %>% kable_styling()
 
 ```
 
-Overall, the categorical variables show meaningful variation across categories. EPC labels are generally balanced across the different categories, indicating that extremely efficient or inefficient homes are not rare in this data. Building era and roof color are also evenly distributed while pet ownership is generally more common. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts.
 
 ### Summary plots
 
 ```{r barplots_cat, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots for non-continuous variables", fig.pos="H"}
 cat_vars <- df_clean %>%
-  select(epc_label, building_era, roof_color, pet_ownership) %>%
-  mutate(across(everything(), as.character)) %>%   # <--- convert all to character
+  select(epc_label, building_era, roof_color, pet_ownership, occupancy_count) %>%
+  mutate(across(everything(), as.character)) %>%
   pivot_longer(
     cols = everything(),
     names_to = "Variable",
@@ -178,31 +184,119 @@ cat_vars <- df_clean %>%
   group_by(Variable) %>%
   mutate(Percent = Count / sum(Count) * 100)
 
-# Plot barplots with facets
-ggplot(cat_vars, aes(x = Category, y = Percent, fill = Category)) +
-  geom_col(show.legend = FALSE) +
+ggplot(cat_vars, aes(x = Category, y = Percent)) +
+  geom_col(fill = "gray") +
   geom_text(aes(label = paste0(round(Percent, 1), "%")),
             vjust = -0.5, size = 3) +
-  facet_wrap(~ Variable, scales = "free_x") +
+  facet_wrap(~ Variable, ncol = 2, scales = "free_x") +
   labs(
     x = NULL,
     y = "Percentage",
     title = "Distribution of Categorical Variables"
   ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+  theme_minimal()
 ```
 
 ## Continuous variables
 
+
 ### Summary tables
+
+```{r echo=FALSE, warning=F, message=F}
+summary_table <- df_clean %>%
+  summarise(
+    across(
+      c(annual_kwh, sq_meters, dist_to_brussels, income_euro),
+      list(
+        Mean = ~mean(.x, na.rm = TRUE),
+        SD = ~sd(.x, na.rm = TRUE),
+        Median = ~median(.x, na.rm = TRUE),
+        IQR = ~IQR(.x, na.rm = TRUE),
+        Min = ~min(.x, na.rm = TRUE),
+        Max = ~max(.x, na.rm = TRUE)
+      )
+    )
+  ) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = c("Variable", "Statistic"),
+    names_pattern = "(.+)_(Mean|SD|Median|IQR|Min|Max)$"
+  ) %>%
+  pivot_wider(names_from = Variable, values_from = value)
+
+
+kable(summary_table,
+      digits = 2,
+      caption = "Summary Statistics for Continuous Variables")
+```
 
 ### Summary plots
 
-- box plots,
-- correlation plots
-- scatter plots, 
-- QQ plots,
+```{r echo=FALSE, warning=F, message=F}
+# ---------------
+# BOX PLOTS
+# ---------------
+
+par(mfrow = c(2,2))  # 1 row, # 2 row, 2 cols
+
+boxplot(df_clean$annual_kwh,
+        main = "Annual Energy Consumption",
+        ylab = "annual_kwh")
+
+boxplot(df_clean$sq_meters,
+        main = "Floor Area",
+        ylab = "sq_meters")
+
+boxplot(df_clean$dist_to_brussels,
+        main = "Distance to Brussels",  
+        ylab = "dist_to_brussels")
+
+boxplot(df_clean$income_euro,
+        main = "Income",
+        ylab = "income_euro")
+
+par(mfrow = c(1,1))  # reset plotting layout
+
+
+
+# ---------------
+# CORR PLOTS
+# ---------------
+vars <- df_clean[, c("annual_kwh", "sq_meters", "dist_to_brussels", "income_euro")]
+cor_matrix <- cor(vars, use = "complete.obs")
+corrplot(cor_matrix,
+         method = "circle",
+         type = "upper",
+         addCoef.col = "black",
+         tl.col = "black",
+         tl.srt = 45)
+
+
+
+
+# ---------------
+# QQ PLOTS
+# ---------------
+par(mfrow = c(2,2))  # 2 row, 2 cols
+
+qqnorm(df_clean$annual_kwh,
+       main = "QQ Plot: Annual Energy Consumption")
+qqline(df_clean$annual_kwh)
+
+qqnorm(df_clean$sq_meters,
+       main = "QQ Plot: Floor Area")
+qqline(df_clean$sq_meters)
+
+qqnorm(df_clean$dist_to_brussels,
+       main = "QQ Plot: Distance to Brussels")
+qqline(df_clean$dist_to_brussels)
+
+qqnorm(df_clean$income_euro,
+       main = "QQ Plot: Income")
+qqline(df_clean$income_euro)
+
+par(mfrow = c(1,1))  # reset layout
+```
 
 # Inferential Statistics
 
