@@ -17,6 +17,8 @@ output:
   pdf_document:
     toc: true
     number_sections: true
+bibliography: references.bib
+csl: apa.csl
 fontsize: 11pt
 geometry: margin=1in
 header-includes:
@@ -38,6 +40,10 @@ library(dplyr)
 library(knitr)
 library(kableExtra)
 library(tidyr)
+library(tidyverse)
+library(ggplot2)
+
+
 
 ```
 
@@ -45,12 +51,22 @@ library(tidyr)
 
 # Background
 
-Brief intro and maybe literature review
+The goal of “*Carbon Neutrality*” is gaining increasing momentum in the European political arena amid substantial indicators of an incoming climate change which might have deleterious effects at the societal, economic and, most importantly, environmental level. Household energy consumption plays a pivotal role in overall social sustainability since it accounts for a substantial share of the total energy demand in most developed countries. Within this sector, electricity consumption provides a useful proxy for household energy demand and can be put into relationship to structural characteristics of the buildings as well as the socio-economic profile of their occupants.
 
-# Dataset and Variables
+Dwelling-related attributes such as floor area, dwelling type, construction period, and Energy Performance Certificate (EPC) labels are consistently identified as important predictors of electricity demand [@mcloughlin2013; @santin2009]. Intuitively, larger dwellings typically require more energy for lighting, heating, cooling, and appliance use, while older buildings are constructed with materials which provides poorer insulation and therefore larger heat dissipation. Nevertheless, these variables interacts with socio-economic factors. Larger households topically host a higher number of occupants, therefore they can share the consumption for heating, refrigerators and air conditioning lowering the per-capita consumption. Similarly, high EPC label buildings are prerogative of high-income classes which might use a larger number of appliances and indulge into energy-consuming behaviours going to erode the benefits of a properly insulated house in terms of energy savings [@aydin2017]. 
+
+Using household electricity consumption as a proxy for energy demand, this cross-sectional study examines its relationship
+with building characteristics (e.g. floor area, EPC label, construction era) and socio-economic factors (number of permanent residents and annual net household income) collecting data from 2500 households in Belgium. Importantly, the study aims at characterising the interplay between EPC labels and the other factors involved in energy consumptions to provide data-driven tools to decision-makers. 
+
+
+# Data management
+
 ## Data Cleaning
-```{r}
-data.students <- read.table("data students.txt",header=TRUE,sep=";")
+
+After loading the data, three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values in the variables EPC label (`epc_label`) and annual household electricity consumption (`annual_kwh`) (none of the variables displayed missingness above 5\%). This step ensures that the analysis is conducted only on complete cases for the key variables of interest. To inspect the distribution of electricity consumption and identify potential extreme values, the observations were sorted in decreasing order of annual electricity consumption (`annual_kwh`). Five observations (row 267, 1330, 1570, 369, 12) were two orders of magnitude larger than the others (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error. 
+
+```{r, echo=FALSE, include=FALSE, warning=F, message=F}
+data.students <- read.table("data_students.txt",header=TRUE,sep=";")
 df_clean <- data.students[-c(66, 36, 135), ]
 df_clean <- df_clean %>%
      filter(!is.na(epc_label) & !is.na(annual_kwh))
@@ -58,14 +74,61 @@ head(df_clean[order(-df_clean$annual_kwh), ], 10)
 df_clean <- df_clean %>%
     filter(annual_kwh <= 18000)
 ```
+
+## Data Coding
+
+Variables were coded according to their type: continuous (e.g., `annual_kwh`, `sq_meters`, `income_euro`), count (`occupancy_count`), ordinal (`epc_label`, `building_era`), categorical (`roof_color`), or binary (`pet_ownership`). Table 1 summarizes their descriptions and coding schemes.
+
+```{r echo=FALSE}
+data_dict <- data.frame(
+  Name = c("annual_kwh",
+           "sq_meters",
+           "epc_label",
+           "building_era",
+           "income_euro",
+           "occupancy_count",
+           "dist_to_brussels",
+           "roof_color",
+           "pet_ownership"),
+  
+  Description = c("yearly electricity use",
+                  "indoor living area",
+                  "energy performance certificate",
+                  "construction period",
+                  "net household income",
+                  "permanent residents",
+                  "distance to Brussels center",
+                  "roof tile color",
+                  "owner has a pet"),
+  
+  Type_Coding = c("Continuous (kWh/year)",
+                  "Continuous (m²)",
+                  "Ordinal: A, B, ..., F",
+                  "Ordinal: dummy coded; ref = Pre-1970",
+                  "Continuous (€/year)",
+                  "Count: 1, 2, ..., n",
+                  "Continuous (km)",
+                  "Categorical: e.g., red, black, other",
+                  "Binary: 0 = No, 1 = Yes")
+)
+
+kable(data_dict, caption = "Data Dictionary") %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  column_spec(2, width = "6cm") %>%  
+  column_spec(3, width = "6cm")
+```
+
+
 # Descriptive Statistics
+
 ## Categorical variables
+
 ### Summary tables
 
 These summary tables should help show if the EPC labels are balanced or skewed, if the building eras arw clustered within one period, if the roof colors or pet ownership categories have enough variation to be meaningful predictors. We can also sue them to investigate whether any category has very low counts, which can affect model stability.
 
 
-```{r}
+```{r echo=FALSE, warning=F, message=F}
 # Create summary tables for categorical variables
 epc_summary <- df_clean %>%
   count(epc_label) %>%
@@ -89,18 +152,46 @@ kable(building_era_summary, caption = "Building Era Distribution") %>% kable_sty
 kable(roof_color_summary, caption = "Roof Color Distribution") %>% kable_styling()
 kable(pet_summary, caption = "Pet Ownership Distribution") %>% kable_styling()
 
-crosscat <- df_clean %>%
-  count(epc_label, building_era, roof_color, pet_ownership) %>%
-  arrange(desc(n))
+#crosscat <- df_clean %>%
+  #count(epc_label, building_era, roof_color, pet_ownership) %>%
+  #arrange(desc(n))
 
-crosscat
+# crosscat
 
 ```
+
 Overall, the categorical variables show meaningful variation across categories. EPC labels are generally balanced across the different categories, indicating that extremely efficient or inefficient homes are not rare in this data. Building era and roof color are also evenly distributed while pet ownership is generally more common. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts.
 
 ### Summary plots
 
-- box plots
+```{r barplots_cat, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots for non-continuous variables", fig.pos="H"}
+cat_vars <- df_clean %>%
+  select(epc_label, building_era, roof_color, pet_ownership) %>%
+  mutate(across(everything(), as.character)) %>%   # <--- convert all to character
+  pivot_longer(
+    cols = everything(),
+    names_to = "Variable",
+    values_to = "Category"
+  ) %>%
+  group_by(Variable, Category) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  group_by(Variable) %>%
+  mutate(Percent = Count / sum(Count) * 100)
+
+# Plot barplots with facets
+ggplot(cat_vars, aes(x = Category, y = Percent, fill = Category)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(round(Percent, 1), "%")),
+            vjust = -0.5, size = 3) +
+  facet_wrap(~ Variable, scales = "free_x") +
+  labs(
+    x = NULL,
+    y = "Percentage",
+    title = "Distribution of Categorical Variables"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+```
 
 ## Continuous variables
 
