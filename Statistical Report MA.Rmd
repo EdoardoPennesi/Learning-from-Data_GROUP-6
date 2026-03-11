@@ -35,6 +35,9 @@ knitr::opts_chunk$set(
 # Libraries
 library(gridExtra)
 library(dplyr)
+library(knitr)
+library(kableExtra)
+library(tidyr)
 
 ```
 
@@ -56,10 +59,44 @@ df_clean <- df_clean %>%
     filter(annual_kwh <= 18000)
 ```
 # Descriptive Statistics
-
 ## Categorical variables
-
 ### Summary tables
+
+These summary tables should help show if the EPC labels are balanced or skewed, if the building eras arw clustered within one period, if the roof colors or pet ownership categories have enough variation to be meaningful predictors. We can also sue them to investigate whether any category has very low counts, which can affect model stability.
+
+
+```{r}
+# Create summary tables for categorical variables
+epc_summary <- df_clean %>%
+  count(epc_label) %>%
+  mutate(percent = round(n / sum(n) * 100, 1))
+
+building_era_summary <- df_clean %>%
+  count(building_era) %>%
+  mutate(percent = round(n / sum(n) * 100, 1))
+
+roof_color_summary <- df_clean %>%
+  count(roof_color) %>%
+  mutate(percent = round(n / sum(n) * 100, 1))
+
+pet_summary <- df_clean %>%
+  count(pet_ownership) %>%
+  mutate(percent = round(n / sum(n) * 100, 1))
+
+
+kable(epc_summary, caption = "EPC Label Distribution") %>% kable_styling()
+kable(building_era_summary, caption = "Building Era Distribution") %>% kable_styling()
+kable(roof_color_summary, caption = "Roof Color Distribution") %>% kable_styling()
+kable(pet_summary, caption = "Pet Ownership Distribution") %>% kable_styling()
+
+crosscat <- df_clean %>%
+  count(epc_label, building_era, roof_color, pet_ownership) %>%
+  arrange(desc(n))
+
+crosscat
+
+```
+Overall, the categorical variables show meaningful variation across categories. EPC labels are generally balanced across the different categories, indicating that extremely efficient or inefficient homes are not rare in this data. Building era and roof color are also evenly distributed while pet ownership is generally more common. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts.
 
 ### Summary plots
 
