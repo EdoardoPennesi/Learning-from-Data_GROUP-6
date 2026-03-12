@@ -43,7 +43,7 @@ library(tidyr)
 library(tidyverse)
 library(ggplot2)
 library(corrplot)
-
+library(purrr)
 
 
 ```
@@ -64,7 +64,7 @@ with building characteristics (e.g. floor area, EPC label, construction era) and
 
 ## Data Cleaning
 
-After loading the data, three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values in the variables EPC label (`epc_label`) and annual household electricity consumption (`annual_kwh`) (none of the variables displayed missingness above 5\%). This step ensures that the analysis is conducted only on complete cases for the key variables of interest. Missing values in other variables were retained (see appendix) without imputation. To inspect the distribution of electricity consumption and identify potential extreme values, the observations were sorted in decreasing order of annual electricity consumption (`annual_kwh`). Five observations (row 267, 1330, 1570, 369, 12) were two orders of magnitude larger than the others (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error. 
+After loading the data, three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values in the variables EPC label (`epc_label`) and annual household electricity consumption (`annual_kwh`). This step ensures that the analysis is conducted only on complete cases for the key variables of interest. None of the variables displayed missingness above 5%. Missing values in other variables were retained (see appendix) without imputation. To inspect the distribution of electricity consumption and identify potential extreme values, the observations were sorted in decreasing order of annual electricity consumption (`annual_kwh`). Five observations (row 267, 1330, 1570, 369, 12) were two orders of magnitude larger than the others (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error. 
 
 ```{r, echo=FALSE, include=FALSE, warning=F, message=F}
 data.students <- read.table("data_students.txt",header=TRUE,sep=";")
@@ -124,12 +124,50 @@ kable(data_dict, caption = "Data Dictionary") %>%
 
 ## Categorical variables
 
-The distribution of EPC labels is relatively balanced across categories. Labels A (22.2%) and C (21.3%) are the most common, followed by B (17.6%) and D (15.7%). Lower-efficiency categories E occur less frequently, 13.6% and F 9.6% respectively. Buildings constructed between 1970 and 2000 represent 34.4% of the sample, pre-1970 buildings account for 33.1%, and post-2000 buildings make up 32.6%. Occupancy count goes from 1 to 7 with all counts accounting approximately 14-15%. Red roofs are the most common (35.2%), followed closely by black roofs (33.3%) and other colors (31.5%). Almost one in four (39.6%) owners has a pet, while 60.4% does not. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts. Overall, the categorical variables show meaningful variation across categories. EPC labels are generally balanced across the different categories, indicating that extremely efficient or inefficient homes are not rare in this data. Building era and roof color are also evenly distributed while pet ownership is generally more common.
+The distribution of EPC labels is relatively balanced across categories. Labels A (22.2%) and C (21.3%) are the most common, followed by B (17.6%) and D (15.7%). Lower-efficiency categories E occur less frequently, 13.6% and F 9.6% respectively. Buildings constructed between 1970 and 2000 represent 34.4% of the sample, pre-1970 buildings account for 33.1%, and post-2000 buildings make up 32.6%. Occupancy count ranges from 1 to 7 with all counts accounting approximately 14-15%. Red roofs are the most common (35.2%), followed closely by black roofs (33.3%) and other colours (31.5%). Almost one in four (39.6%) owners has a pet, while 60.4% does not. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts. Overall, the categorical variables show meaningful variation across categories. Summary tables are presented in the appendix. 
 
-*Edo's comment: i think the sentence below can be replaced by the actual description as in the paragraph above and tables will go in the appendix*
-These summary tables should help show if the EPC labels are balanced or skewed, if the building eras arw clustered within one period, if the roof colours or pet ownership categories have enough variation to be meaningful predictors. We can also sue them to investigate whether any category has very low counts, which can affect model stability.
 
-### Summary tables
+## Continuous variables
+
+On average, households consume 5,874.76 kWh of electricity annually, with a relatively large standard deviation (2,224.25 kWh). The median consumption (5,432.07 kWh) is slightly lower than the mean, suggesting a right-skewed distribution, which is also supported by the QQ plot showing upward deviations above the diagonal line in the upper tail (see appendix). Floor area averages 158.25 m² with a standard deviation of 36.50 m², and a range from 60.26 m² to 341.30 m². The QQ plot for floor area shows only mild departures from normality. The average distance to Brussels is 62.96 km, with observations ranging from 5.11 km to 120 km. Its QQ plot indicates noticeable curvature, implying that the distribution deviates from normality, possibly reflecting clustering of households at certain distance ranges during the sampling procedure. Household income averages €48,842.90, with a standard deviation of €22,534.97) and a range from €8,487.91 to €206,367.91. As expected for this type of variable the QQ plot shows strong upper-tail deviation, suggesting positive skewness driven by high-income outliers.
+
+The correlation matrix reveals that annual electricity consumption has a moderate positive correlation with floor area (r = 0.38) and a positive correlation with income (r = 0.29), suggesting that larger and wealthier households tend to consume more energy. Importantly, two predictors exhibit a strong positive correlation with each other, namely floor area and income (r = 0.72). Distance to Brussels shows virtually no correlation with the other variables (correlations near zero), suggesting that location relative to Brussels does not strongly influence household energy use, dwelling size, or income in this dataset.
+
+Summary tables and graphs are provided in the appendix.
+
+
+# Inferential Statistics
+
+## Regression model
+
+## DAGs
+
+## Results table
+
+| Term | Estimate | Std. Error | t value | Pr(>|t|) | adjusted p |
+|------|----------|------------|---------|----------| ---------  |
+
+- VIF analysis
+- Cross validation analysis
+
+
+## Diagnostic plots
+
+- Residuals vs Fitted
+- Normal Q–Q Plot
+- Scale–Location Plot (Spread–Location)
+- Residuals vs Leverage
+- Influence (Cook’s Distance)
+
+## Contrast analysis
+
+- for research question 2 and 4
+
+# Conclusions
+
+# Appendix
+
+## Summary tables for non-continuous varibales
 ```{r echo=FALSE, warning=F, message=F}
 # Create summary tables for categorical variables
 epc_summary <- df_clean %>%
@@ -168,39 +206,7 @@ kable(occupancy_count, caption = "Occupancy Count Distribution") %>% kable_styli
 ```
 
 
-### Summary plots
-
-```{r barplots_cat, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots for non-continuous variables", fig.pos="H"}
-cat_vars <- df_clean %>%
-  select(epc_label, building_era, roof_color, pet_ownership, occupancy_count) %>%
-  mutate(across(everything(), as.character)) %>%
-  pivot_longer(
-    cols = everything(),
-    names_to = "Variable",
-    values_to = "Category"
-  ) %>%
-  group_by(Variable, Category) %>%
-  summarise(Count = n(), .groups = "drop") %>%
-  group_by(Variable) %>%
-  mutate(Percent = Count / sum(Count) * 100)
-
-ggplot(cat_vars, aes(x = Category, y = Percent)) +
-  geom_col(fill = "gray") +
-  geom_text(aes(label = paste0(round(Percent, 1), "%")),
-            vjust = -0.5, size = 3) +
-  facet_wrap(~ Variable, ncol = 2, scales = "free_x") +
-  labs(
-    x = NULL,
-    y = "Percentage",
-    title = "Distribution of Categorical Variables"
-  ) +
-  theme_minimal()
-```
-
-## Continuous variables
-
-
-### Summary tables
+## Summary tables for continuous varibales
 
 ```{r echo=FALSE, warning=F, message=F}
 summary_table <- df_clean %>%
@@ -230,14 +236,14 @@ kable(summary_table,
       caption = "Summary Statistics for Continuous Variables")
 ```
 
-### Summary plots
+## Summary plots for continuous varibales
 
-```{r echo=FALSE, warning=F, message=F}
+```{r boxplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for continuous variables", fig.pos="H"}
 # ---------------
 # BOX PLOTS
 # ---------------
 
-par(mfrow = c(2,2))  # 1 row, # 2 row, 2 cols
+par(mfrow = c(1,2))  # 1 row, # 2 cols
 
 boxplot(df_clean$annual_kwh,
         main = "Annual Energy Consumption",
@@ -246,6 +252,10 @@ boxplot(df_clean$annual_kwh,
 boxplot(df_clean$sq_meters,
         main = "Floor Area",
         ylab = "sq_meters")
+par(mfrow = c(1,1))  # reset plotting layout
+
+
+par(mfrow = c(1,2))  # 1 row, # 2 cols
 
 boxplot(df_clean$dist_to_brussels,
         main = "Distance to Brussels",  
@@ -257,7 +267,9 @@ boxplot(df_clean$income_euro,
 
 par(mfrow = c(1,1))  # reset plotting layout
 
+```
 
+```{r corr.plots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Correlation plots for continuous variables", fig.pos="H"}
 
 # ---------------
 # CORR PLOTS
@@ -271,14 +283,12 @@ corrplot(cor_matrix,
          tl.col = "black",
          tl.srt = 45)
 
+```
 
-
-
+```{r QQplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="QQ plots for continuous variables", fig.pos="H"}
 # ---------------
 # QQ PLOTS
 # ---------------
-par(mfrow = c(2,2))  # 2 row, 2 cols
-
 qqnorm(df_clean$annual_kwh,
        main = "QQ Plot: Annual Energy Consumption")
 qqline(df_clean$annual_kwh)
@@ -295,42 +305,7 @@ qqnorm(df_clean$income_euro,
        main = "QQ Plot: Income")
 qqline(df_clean$income_euro)
 
-par(mfrow = c(1,1))  # reset layout
 ```
 
-# Inferential Statistics
 
-## Regression model
-
-## DAGs
-
-## Results table
-
-| Term | Estimate | Std. Error | t value | Pr(>|t|) | adjusted p |
-|------|----------|------------|---------|----------| ---------  |
-
-- VIF analysis
-- Cross validation analysis
-
-
-## Diagnostic plots
-
-- Residuals vs Fitted
-- Normal Q–Q Plot
-- Scale–Location Plot (Spread–Location)
-- Residuals vs Leverage
-- Influence (Cook’s Distance)
-
-## Contrast analysis
-
-- for research question 2 and 4
-
-# Conclusions
-
-## Research question 1
-
-## Research question 2
-
-## Research question 3
-
-## Research question 4
+# References
