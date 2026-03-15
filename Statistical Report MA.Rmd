@@ -124,14 +124,14 @@ kable(data_dict, caption = "Data Dictionary") %>%
 
 ## Categorical variables
 
-The distribution of EPC labels is relatively balanced across categories. Labels A (22.2%) and C (21.3%) are the most common, followed by B (17.6%) and D (15.7%). Lower-efficiency categories E occur less frequently, 13.6% and F 9.6% respectively. Buildings constructed between 1970 and 2000 represent 34.4% of the sample, pre-1970 buildings account for 33.1%, and post-2000 buildings make up 32.6%. Occupancy count ranges from 1 to 7 with all counts accounting approximately 14-15%. Red roofs are the most common (35.2%), followed closely by black roofs (33.3%) and other colours (31.5%). Almost one in four (39.6%) owners has a pet, while 60.4% does not. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts. Overall, the categorical variables show meaningful variation across categories. Summary tables are presented in the appendix. 
+The distribution of EPC labels is relatively balanced across categories. Labels A (22.2%) and C (21.3%) are the most common, followed by B (17.6%) and D (15.7%). Lower-efficiency categories E occur less frequently, 13.6% and F 9.6% respectively. Buildings constructed between 1970 and 2000 represent 34.4% of the sample, pre-1970 buildings account for 33.1%, and post-2000 buildings make up 32.6%. Occupancy count ranges from 1 to 7 with all counts accounting approximately 14-15%. Red roofs are the most common (35.2%), followed closely by black roofs (33.3%) and other colours (31.5%). Almost one in four (39.6%) owners has a pet, while 60.4% does not. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts. Overall, the categorical variables show meaningful variation across categories. From the exploratory analysis, two categorical variables seem to correlate strongly with electricity consumption: EPC label and occupancy count. The other categorical variables do njot display an apparent correlation with electricity consumption. Summary tables and plots are presented in the appendix. 
 
 
 ## Continuous variables
 
-On average, households consume 5,874.76 kWh of electricity annually, with a relatively large standard deviation (2,224.25 kWh). The median consumption (5,432.07 kWh) is slightly lower than the mean, suggesting a right-skewed distribution, which is also supported by the QQ plot showing upward deviations above the diagonal line in the upper tail (see appendix). Floor area averages 158.25 m² with a standard deviation of 36.50 m², and a range from 60.26 m² to 341.30 m². The QQ plot for floor area shows only mild departures from normality. The average distance to Brussels is 62.96 km, with observations ranging from 5.11 km to 120 km. Its QQ plot indicates noticeable curvature, implying that the distribution deviates from normality, possibly reflecting clustering of households at certain distance ranges during the sampling procedure. Household income averages €48,842.90, with a standard deviation of €22,534.97) and a range from €8,487.91 to €206,367.91. As expected for this type of variable the QQ plot shows strong upper-tail deviation, suggesting positive skewness driven by high-income outliers.
+On average, households consume 5,874.76 kWh of electricity annually, with a relatively large standard deviation (2,224.25 kWh). The median consumption (5,432.07 kWh) is slightly lower than the mean, suggesting a right-skewed distribution, which is also supported by the QQ plot showing upward deviations above the diagonal line in the upper tail (see appendix). Floor area averages 158.25 m² with a standard deviation of 36.50 m², and a range from 60.26 m² to 341.30 m². The QQ plot for floor area shows only mild departures from normality. The average distance to Brussels is 62.96 km, with observations ranging from 5.11 km to 120 km. Its QQ plot indicates noticeable curvature, implying that the distribution deviates from normality, possibly reflecting clustering of households at certain distance ranges during the sampling procedure. Household income averages €48,842.90, with a standard deviation of €22,534.97 and a range from €8,487.91 to €206,367.91. As expected for this type of variable the QQ plot shows strong upper-tail deviation, suggesting positive skewness driven by high-income outliers.
 
-The correlation matrix reveals that annual electricity consumption has a moderate positive correlation with floor area (r = 0.38) and a positive correlation with income (r = 0.29), suggesting that larger and wealthier households tend to consume more energy. Importantly, two predictors exhibit a strong positive correlation with each other, namely floor area and income (r = 0.72). Distance to Brussels shows virtually no correlation with the other variables (correlations near zero), suggesting that location relative to Brussels does not strongly influence household energy use, dwelling size, or income in this dataset.
+The correlation matrix reveals that annual electricity consumption has a moderate positive correlation with floor area (r = 0.38) and with income (r = 0.29), suggesting that larger and wealthier households tend to consume more energy. Importantly, two predictors exhibit a strong positive correlation with each other, namely floor area and income (r = 0.72). Distance to Brussels shows virtually no correlation with the other variables, suggesting that location relative to Brussels does not strongly influence household energy use, dwelling size, or income in this dataset.
 
 Summary tables and graphs are provided in the appendix.
 
@@ -304,6 +304,68 @@ qqline(df_clean$dist_to_brussels)
 qqnorm(df_clean$income_euro,
        main = "QQ Plot: Income")
 qqline(df_clean$income_euro)
+
+```
+
+
+
+
+```{r QQplots_log.cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="QQ plots for log-transfor continuous variables", fig.pos="H"}
+# ---------------
+# QQ PLOTS
+# ---------------
+qqnorm(log(df_clean$annual_kwh),
+       main = "QQ Plot: Log Annual Energy Consumption")
+qqline(log(df_clean$annual_kwh))
+
+qqnorm(log(df_clean$sq_meters),
+       main = "QQ Plot: Log Floor Area")
+qqline(log(df_clean$sq_meters))
+
+qqnorm(log(df_clean$dist_to_brussels),
+       main = "QQ Plot: Log Distance to Brussels")
+qqline(log(df_clean$dist_to_brussels))
+
+qqnorm(log(df_clean$income_euro),
+       main = "QQ Plot: Log Income")
+qqline(log(df_clean$income_euro))
+
+```
+```{r boxplots eng.cons vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables", fig.pos="H"}
+# ---------------
+# BOX PLOTS
+# ---------------
+
+boxplot(annual_kwh ~ epc_label,
+        data = df_clean,
+        main = "Annual Energy Consumption by EPC Label",
+        ylab = "annual_kwh",
+        xlab = "epc_label")
+
+boxplot(annual_kwh ~ building_era,
+        data = df_clean,
+        main = "Annual Energy Consumption by Building Era",
+        ylab = "annual_kwh",
+        xlab = "building_era")
+
+boxplot(annual_kwh ~ pet_ownership,
+        data = df_clean,
+        main = "Annual Energy Consumption by Pet Ownership",
+        ylab = "annual_kwh",
+        xlab = "Pet Ownership")
+
+
+boxplot(annual_kwh ~ occupancy_count,
+        data = df_clean,
+        main = "Annual Energy Consumption by Occupancy Counts",
+        ylab = "annual_kwh",
+        xlab = "Occupancy Counts")
+
+boxplot(annual_kwh ~ roof_color,
+        data = df_clean,
+        main = "Annual Energy Consumption by Roof Color",
+        ylab = "annual_kwh",
+        xlab = "Roof Color")
 
 ```
 
