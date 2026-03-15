@@ -369,5 +369,6 @@ boxplot(annual_kwh ~ roof_color,
 
 ```
 
+\newpage
 
 # References
