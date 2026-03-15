@@ -140,16 +140,79 @@ Summary tables and graphs are provided in the appendix.
 
 ## Regression model
 
-## DAGs
+```{r echo=FALSE, warning=F, message=F}
 
-## Results table
+df_clean$epc_label <- factor(df_clean$epc_label)
+df_clean$building_era <- factor(df_clean$building_era)
+df_clean$roof_color <- factor(df_clean$roof_color)
+df_clean$pet_ownership <- factor(df_clean$pet_ownership)
 
-| Term | Estimate | Std. Error | t value | Pr(>|t|) | adjusted p |
-|------|----------|------------|---------|----------| ---------  |
+df_clean$building_era <- relevel(df_clean$building_era, ref = "Pre-1970")
 
-- VIF analysis
-- Cross validation analysis
 
+full_model <- lm(
+  annual_kwh ~ sq_meters +
+    epc_label +
+    building_era +
+    income_euro +
+    occupancy_count +
+    dist_to_brussels +
+    roof_color +
+    pet_ownership +
+    income_euro:occupancy_count +
+    epc_label:sq_meters +
+    epc_label:occupancy_count +
+    income_euro:epc_label,
+  data = df_clean
+)
+
+
+n <- nrow(df_clean)
+
+final_model <- step(
+  full_model,
+  direction = "backward",
+  k = log(n)
+)
+```
+
+```{r echo=FALSE, warning=F, message=F}
+
+summary(final_model)
+
+BIC(final_model)
+```
+
+
+```{r echo=FALSE, warning=F, message=F}
+
+full_model.log <- lm(
+  log(annual_kwh) ~ sq_meters +
+    epc_label +
+    building_era +
+    income_euro +
+    occupancy_count +
+    dist_to_brussels +
+    roof_color +
+    pet_ownership +
+    income_euro:occupancy_count +
+    epc_label:sq_meters +
+    epc_label:occupancy_count +
+    income_euro:epc_label,
+  data = df_clean
+)
+
+n <- nrow(df_clean)
+
+final_model.log <- step(
+  full_model.log,
+  direction = "backward",
+  k = log(n)
+)
+
+summary(final_model.log)
+BIC(final_model.log)
+```
 
 ## Diagnostic plots
 
@@ -168,6 +231,7 @@ Summary tables and graphs are provided in the appendix.
 # Appendix
 
 ## Summary tables for non-continuous varibales
+
 ```{r echo=FALSE, warning=F, message=F}
 # Create summary tables for categorical variables
 epc_summary <- df_clean %>%
@@ -194,9 +258,6 @@ occupancy_count <- df_clean %>%
 kable(epc_summary, caption = "EPC Label Distribution") %>% kable_styling()
 kable(building_era_summary, caption = "Building Era Distribution") %>% kable_styling()
 kable(roof_color_summary, caption = "Roof Color Distribution") %>% kable_styling()
-kable(pet_summary, caption = "Pet Ownership Distribution") %>% kable_styling()
-kable(occupancy_count, caption = "Occupancy Count Distribution") %>% kable_styling()
-
 #crosscat <- df_clean %>%
   #count(epc_label, building_era, roof_color, pet_ownership) %>%
   #arrange(desc(n))
@@ -205,6 +266,15 @@ kable(occupancy_count, caption = "Occupancy Count Distribution") %>% kable_styli
 
 ```
 
+\newpage
+
+```{r echo=FALSE, warning=F, message=F}
+
+kable(pet_summary, caption = "Pet Ownership Distribution") %>% kable_styling()
+kable(occupancy_count, caption = "Occupancy Count Distribution") %>% kable_styling()
+```
+
+\newpage
 
 ## Summary tables for continuous varibales
 
@@ -230,20 +300,22 @@ summary_table <- df_clean %>%
   ) %>%
   pivot_wider(names_from = Variable, values_from = value)
 
-
 kable(summary_table,
       digits = 2,
       caption = "Summary Statistics for Continuous Variables")
 ```
 
+\newpage
+
 ## Summary plots for continuous varibales
 
-```{r boxplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for continuous variables", fig.pos="H"}
+```{r boxplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for continuous variables", fig.pos="H", fig.width=10, fig.height=8}
+
 # ---------------
 # BOX PLOTS
 # ---------------
 
-par(mfrow = c(1,2))  # 1 row, # 2 cols
+layout(matrix(1:4, 2, 2))
 
 boxplot(df_clean$annual_kwh,
         main = "Annual Energy Consumption",
@@ -252,10 +324,6 @@ boxplot(df_clean$annual_kwh,
 boxplot(df_clean$sq_meters,
         main = "Floor Area",
         ylab = "sq_meters")
-par(mfrow = c(1,1))  # reset plotting layout
-
-
-par(mfrow = c(1,2))  # 1 row, # 2 cols
 
 boxplot(df_clean$dist_to_brussels,
         main = "Distance to Brussels",  
@@ -265,15 +333,19 @@ boxplot(df_clean$income_euro,
         main = "Income",
         ylab = "income_euro")
 
-par(mfrow = c(1,1))  # reset plotting layout
-
 ```
+
+
+
 
 ```{r corr.plots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Correlation plots for continuous variables", fig.pos="H"}
 
 # ---------------
 # CORR PLOTS
 # ---------------
+
+par(mfrow = c(1,1))  # reset plotting layout
+
 vars <- df_clean[, c("annual_kwh", "sq_meters", "dist_to_brussels", "income_euro")]
 cor_matrix <- cor(vars, use = "complete.obs")
 corrplot(cor_matrix,
@@ -285,10 +357,15 @@ corrplot(cor_matrix,
 
 ```
 
-```{r QQplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="QQ plots for continuous variables", fig.pos="H"}
+```{r QQplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="QQ plots for continuous variables", fig.pos="H", fig.width=12, fig.height=15}
+
 # ---------------
 # QQ PLOTS
 # ---------------
+
+layout(matrix(1:4, 2, 2))
+
+
 qqnorm(df_clean$annual_kwh,
        main = "QQ Plot: Annual Energy Consumption")
 qqline(df_clean$annual_kwh)
@@ -310,10 +387,14 @@ qqline(df_clean$income_euro)
 
 
 
-```{r QQplots_log.cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="QQ plots for log-transfor continuous variables", fig.pos="H"}
+```{r QQplots_log.cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="QQ plots for log-transformed continuous variables", fig.pos="H", fig.width=12, fig.height=15, fig.show="hold"}
+
 # ---------------
-# QQ PLOTS
+# QQ PLOTS LOG 
 # ---------------
+
+layout(matrix(1:4, 2, 2))
+
 qqnorm(log(df_clean$annual_kwh),
        main = "QQ Plot: Log Annual Energy Consumption")
 qqline(log(df_clean$annual_kwh))
@@ -331,16 +412,34 @@ qqnorm(log(df_clean$income_euro),
 qqline(log(df_clean$income_euro))
 
 ```
-```{r boxplots eng.cons vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables", fig.pos="H"}
+
+
+```{r boxplots eng.cons vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 1)", fig.pos="H", fig.width=9, fig.height=12, fig.show="hold"}
+
 # ---------------
 # BOX PLOTS
 # ---------------
+
+layout(matrix(1:2, 2, 1))
 
 boxplot(annual_kwh ~ epc_label,
         data = df_clean,
         main = "Annual Energy Consumption by EPC Label",
         ylab = "annual_kwh",
         xlab = "epc_label")
+
+boxplot(annual_kwh ~ occupancy_count,
+        data = df_clean,
+        main = "Annual Energy Consumption by Occupancy Counts",
+        ylab = "annual_kwh",
+        xlab = "Occupancy Counts")
+```
+
+
+```{r boxplots eng.cons vs cat_vars2, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 2)", fig.pos="H", fig.width=9, fig.height=12, fig.show="hold"}
+
+layout(matrix(1:3, 3, 1))
+
 
 boxplot(annual_kwh ~ building_era,
         data = df_clean,
@@ -354,12 +453,6 @@ boxplot(annual_kwh ~ pet_ownership,
         ylab = "annual_kwh",
         xlab = "Pet Ownership")
 
-
-boxplot(annual_kwh ~ occupancy_count,
-        data = df_clean,
-        main = "Annual Energy Consumption by Occupancy Counts",
-        ylab = "annual_kwh",
-        xlab = "Occupancy Counts")
 
 boxplot(annual_kwh ~ roof_color,
         data = df_clean,
