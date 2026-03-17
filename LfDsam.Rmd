@@ -1,0 +1,244 @@
+---
+title: "Learning from data"
+author: "Samer Mheissen"
+date: "2026-03-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+library(tidyverse)
+data.students <- read.csv("~/Library/CloudStorage/GoogleDrive-samer.mheissen@student.uhasselt.be/My Drive/25:26/2nd Semester/Project Learning  Data /Project/data students.txt", sep=";")
+##
+data.students <- read.table("data students.txt",header=TRUE,sep=";")
+df_clean <- data.students[-c(66, 36, 135), ]
+missing <-colSums(is.na(df_clean))
+df_clean <- na.omit(df_clean)
+
+# categorical variables are factors
+df_clean$epc_label <- as.factor(df_clean$epc_label)
+df_clean$building_era <- as.factor(df_clean$building_era)
+df_clean$roof_color <- as.factor(df_clean$roof_color)
+df_clean$pet_ownership <- as.factor(df_clean$pet_ownership)
+
+
+##
+head(df_clean[order(-df_clean$annual_kwh), ], 10)
+df_clean_a <- df_clean %>%
+    filter(annual_kwh <= 15000)
+
+```
+```{r}
+library(gtsummary)
+
+# summarize the data with our package
+table1 <-
+  df_clean_a |>
+  tbl_summary(
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    )
+  )
+
+##median IQR
+table2 <-
+  df_clean_a |>
+  tbl_summary(
+    statistic = list(
+      all_continuous() ~ "{median} ({p25}, {p75})",
+      all_categorical() ~ "{n} ({p}%)"
+    )
+  )
+##byepc
+table3 <-
+  df_clean_a |>
+  tbl_summary(
+    by = epc_label,
+    statistic = list(
+      all_continuous() ~ "{median} ({p25}, {p75})",
+      all_categorical() ~ "{n} ({p}%)"
+    )
+  ) |>
+  add_overall()
+table3
+```
+```{r}
+library(ggplot2)
+
+df_clean_a |>
+  tidyr::pivot_longer(where(is.numeric)) |>
+  ggplot(aes(y = value)) +
+  geom_boxplot() +
+  facet_wrap(~name, scales = "free")
+```
+```{r}
+num_vars <- df_clean_a |> dplyr::select(where(is.numeric))
+
+par(mfrow=c(3,3))
+for(v in names(num_vars)){
+  qqnorm(num_vars[[v]], main=v)
+  qqline(num_vars[[v]])
+}
+```
+
+
+
+
+
+```{r}
+library(ggplot2)
+
+# Before
+ggplot(df_clean, aes(x = annual_kwh)) +
+  geom_histogram(bins = 30, fill = "lightblue") +
+  labs(title = "Annual kWh - Before Cleaning")
+
+# After
+ggplot(df_clean_a, aes(x = annual_kwh)) +
+  geom_histogram(bins = 30, fill = "lightgreen") +
+  labs(title = "Annual kWh - After Removing Outliers")
+```
+```{r}
+df_clean_a$epc_label <- factor(
+  df_clean_a$epc_label,
+  levels = c("A", "B", "C", "D", "E", "F")
+)
+df_clean_a <- df_clean_a %>%
+  mutate(epc_num = as.numeric(factor(epc_label)))
+##
+library(ggplot2)
+
+ggplot(df_clean_a , aes(x = epc_num, y = annual_kwh)) +
+  geom_jitter(width = 0.2, alpha = 0.6, color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  scale_x_continuous(
+    breaks = 1:length(levels(df_clean_a$epc_label)),
+    labels = levels(df_clean_a$epc_label)
+  ) +
+  labs(
+    x = "EPC Label",
+    y = "Annual kWh",
+    title = "Annual Energy Consumption by EPC Label"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+library(ggplot2)
+unique(df_clean_a$building_era)
+unique(df_clean_a$epc_label)
+##
+df_clean_a$building_era <- factor(
+  df_clean_a$building_era,   # refer to the column inside the dataframe
+  levels = c("Pre-1970", "1970-2000", "Post-2000")
+)
+
+# Basic boxplot with faceting
+ggplot(data = df_clean_a, aes(x =epc_label , y = annual_kwh)) +
+  geom_boxplot(fill = "skyblue", color = "darkblue") +
+  facet_wrap(~building_era ) +   # facet by era
+  labs(
+    title = "Annual y by EPC label across Eras",
+    x = "EPC Label",
+    y = "Year Era"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(face = "bold")
+  )
+```
+
+
+```{r}
+
+library(MASS)
+#baseline model
+modbackm<-lm( annual_kwh ~ ., data = df_clean_a) %>%
+  step(direction = "backward", trace =0)
+summary(modbackm)
+plot(modbackm)
+
+###logarithmic
+modbacklom<-lm( log(annual_kwh) ~ ., data = df_clean_a) %>%
+  step(direction = "backward", trace =0)
+summary(modbacklom)
+plot(modbacklom)
+
+# Compare coefficients
+coef(modbackm)
+coef(modbacklom)
+##Akaike Information Criterion
+AIC(modbackm)
+AIC(modbacklom)
+BIC(modbackm)
+BIC(modbacklom)
+```
+
+```{r}
+##stepwise both direction
+formula_full <- annual_kwh ~ .
+
+mod_both <- lm(formula_full, data = df_clean_a) %>%
+            step(direction = "both", trace = 0)
+summary(mod_both)
+```
+```{r}
+##diagnostic
+par(mfrow = c(2, 2))  # arrange 4 plots
+plot(mod_both)
+par(mfrow = c(1,1))   # reset layout
+```
+```{r}
+library(broom)
+##stepwise both direction
+formula_log <- log(annual_kwh) ~ .
+
+mod_bothlog <- lm(formula_log, data = df_clean_a) %>%
+            step(direction = "both", trace = 0)
+summary(mod_bothlog)
+BIC(mod_bothlog)
+##diagnostic
+par(mfrow = c(2, 2))  # arrange 4 plots
+plot(mod_bothlog)
+par(mfrow = c(1,1)) 
+##
+library(car)
+vif(mod_bothlog)
+
+##Leverage
+lev <- hatvalues(mod_bothlog)
+head(lev)
+```
+```{r}
+lm(formula = log(annual_kwh) ~ sq_meters + epc_label+ building_era+ occupancy_count +income_euro+dist_to_brussels, 
+    data = df_clean_a)%>%
+  summary()
+```
+
+```{r}
+##cor matrix
+library(dplyr)
+num_data <- select_if(df_clean_a, is.numeric)
+cor_matrix <- cor(num_data, use = "complete.obs")
+cor_matrix
+
+```
+```{r}
+library(corrplot)
+
+corrplot(
+  cor_matrix,
+  method = "color",
+  type = "upper",
+  addCoef.col = "black",
+  tl.cex = 0.8,
+  number.cex = 0.7
+)
+```
+
