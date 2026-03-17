@@ -44,8 +44,7 @@ library(tidyverse)
 library(ggplot2)
 library(corrplot)
 library(purrr)
-
-
+library(ggfortify)
 ```
 
 \newpage
@@ -64,7 +63,7 @@ with building characteristics (e.g. floor area, EPC label, construction era) and
 
 ## Data Cleaning
 
-After loading the data, three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values in the variables EPC label (`epc_label`) and annual household electricity consumption (`annual_kwh`). This step ensures that the analysis is conducted only on complete cases for the key variables of interest. None of the variables displayed missingness above 5%. Missing values in other variables were retained (see appendix) without imputation. To inspect the distribution of electricity consumption and identify potential extreme values, the observations were sorted in decreasing order of annual electricity consumption (`annual_kwh`). Five observations (row 267, 1330, 1570, 369, 12) were two orders of magnitude larger than the others (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error. 
+Three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values in the variables EPC label (`epc_label`) and annual household electricity consumption (`annual_kwh`). This step ensures that the analysis is conducted only on complete cases for the key variables of interest. None of the variables displayed missingness above 5%. Missing values in other variables were retained (see appendix) without imputation. To inspect the distribution of electricity consumption and identify potential extreme values, the observations were sorted in decreasing order of annual electricity consumption (`annual_kwh`). Five observations (row 267, 1330, 1570, 369, 12) were two orders of magnitude larger than the others (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error. 
 
 ```{r, echo=FALSE, include=FALSE, warning=F, message=F}
 data.students <- read.table("data_students.txt",header=TRUE,sep=";")
@@ -78,7 +77,7 @@ df_clean <- df_clean %>%
 
 ## Data Coding
 
-Variables were coded according to their type: continuous (e.g., `annual_kwh`, `sq_meters`, `income_euro`), count (`occupancy_count`), ordinal (`epc_label`, `building_era`), categorical (`roof_color`), or binary (`pet_ownership`). Table 1 summarizes their descriptions and coding schemes.
+Variables were coded according to their type: continuous, count, ordinal, categorical, or binary. Table 1 summarizes their descriptions and coding schemes.
 
 ```{r echo=FALSE}
 data_dict <- data.frame(
@@ -140,7 +139,11 @@ Summary tables and graphs are provided in the appendix.
 
 ## Regression model
 
-```{r echo=FALSE, warning=F, message=F}
+The initial model contained all variables plus interaction terms between income and number of occupants, EPC label and floor area, EPC label and
+number of occupants, and income and EPC label (see appendix). The outcome variable `annual_kwh` was initially regressed using row data. Diagnostic plots (see appendix) showed some violations of the standard assumptions. In particular, the residuals vs fitted plot indicates the presence of heteroskedasticity, with the variance of the residuals increasing for higher fitted values, and mild deviations from linearity. The outcome variable `annual_kwh` was then log transformed to ensure normal distribution. At each step, the variable whose removal produced the greatest reduction in BIC was eliminated from the model until no further decrease was observed. After applying backward stepwise selection based on the BIC, the final model retained floor area, EPC label, and the number of occupants as predictors of annual electricity consumption. The interaction terms and other covariates were removed. The final model explained approximately 89% of the variability in log-transformed annual electricity consumption. Larger homes, lower EPC ratings, and a higher number of occupants were associated with significantly higher electricity consumption.
+
+
+```{r echo=FALSE, warning=F, message=F, include=FALSE}
 
 df_clean$epc_label <- factor(df_clean$epc_label)
 df_clean$building_era <- factor(df_clean$building_era)
@@ -174,9 +177,10 @@ final_model <- step(
   direction = "backward",
   k = log(n)
 )
+
 ```
 
-```{r echo=FALSE, warning=F, message=F}
+```{r echo=FALSE, warning=F, message=F, include=FALSE}
 
 summary(final_model)
 
@@ -184,7 +188,7 @@ BIC(final_model)
 ```
 
 
-```{r echo=FALSE, warning=F, message=F}
+```{r echo=FALSE, warning=F, message=F, include=FALSE}
 
 full_model.log <- lm(
   log(annual_kwh) ~ sq_meters +
@@ -214,13 +218,17 @@ summary(final_model.log)
 BIC(final_model.log)
 ```
 
-## Diagnostic plots
 
-- Residuals vs Fitted
-- Normal Q–Q Plot
-- Scale–Location Plot (Spread–Location)
-- Residuals vs Leverage
-- Influence (Cook’s Distance)
+```{r echo=FALSE, warning=F, message=F}
+
+coef_table <- summary(final_model.log)$coefficients
+colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value")
+
+kable(coef_table,
+      digits = 5,
+      caption = "Regression results for the selected model")
+```
+
 
 ## Contrast analysis
 
@@ -228,29 +236,34 @@ BIC(final_model.log)
 
 # Conclusions
 
+
+\newpage
+
 # Appendix
 
 ## Summary tables for non-continuous varibales
 
+Tables below refer to the dataset with only rows 66, 36 135 removed.
+
 ```{r echo=FALSE, warning=F, message=F}
 # Create summary tables for categorical variables
-epc_summary <- df_clean %>%
+epc_summary <- data.students[-c(66, 36, 135), ] %>%
   count(epc_label) %>%
   mutate(percent = round(n / sum(n) * 100, 1))
 
-building_era_summary <- df_clean %>%
+building_era_summary <- data.students[-c(66, 36, 135), ] %>%
   count(building_era) %>%
   mutate(percent = round(n / sum(n) * 100, 1))
 
-roof_color_summary <- df_clean %>%
+roof_color_summary <- data.students[-c(66, 36, 135), ] %>%
   count(roof_color) %>%
   mutate(percent = round(n / sum(n) * 100, 1))
 
-pet_summary <- df_clean %>%
+pet_summary <- data.students[-c(66, 36, 135), ] %>%
   count(pet_ownership) %>%
   mutate(percent = round(n / sum(n) * 100, 1))
 
-occupancy_count <- df_clean %>%
+occupancy_count <- data.students[-c(66, 36, 135), ] %>%
   count(occupancy_count) %>%
   mutate(percent = round(n / sum(n) * 100, 1))
 
@@ -258,11 +271,6 @@ occupancy_count <- df_clean %>%
 kable(epc_summary, caption = "EPC Label Distribution") %>% kable_styling()
 kable(building_era_summary, caption = "Building Era Distribution") %>% kable_styling()
 kable(roof_color_summary, caption = "Roof Color Distribution") %>% kable_styling()
-#crosscat <- df_clean %>%
-  #count(epc_label, building_era, roof_color, pet_ownership) %>%
-  #arrange(desc(n))
-
-# crosscat
 
 ```
 
@@ -274,12 +282,12 @@ kable(pet_summary, caption = "Pet Ownership Distribution") %>% kable_styling()
 kable(occupancy_count, caption = "Occupancy Count Distribution") %>% kable_styling()
 ```
 
-\newpage
-
 ## Summary tables for continuous varibales
 
+Tables below refer to the dataset with only rows 66, 36 135 removed.
+
 ```{r echo=FALSE, warning=F, message=F}
-summary_table <- df_clean %>%
+summary_table <- data.students[-c(66, 36, 135), ] %>%
   summarise(
     across(
       c(annual_kwh, sq_meters, dist_to_brussels, income_euro),
@@ -309,7 +317,10 @@ kable(summary_table,
 
 ## Summary plots for continuous varibales
 
-```{r boxplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for continuous variables", fig.pos="H", fig.width=10, fig.height=8}
+Figures below refer to the dataset used for the regression model from which missing values and outliers in annual energy consumption were removed as explained in section two. From the box plot we observe that several variables exhibit right-skewness and upper-tail outliers, particularly income and energy consumption. While annual energy consumption deviates significantly from normality, its log transformed analogue follows an approximate normal distribution dispute a mild deviation from the expected quantiles in the lower and upper tail.    
+
+
+```{r boxplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for continuous variables", fig.width=10, fig.height=8}
 
 # ---------------
 # BOX PLOTS
@@ -336,28 +347,7 @@ boxplot(df_clean$income_euro,
 ```
 
 
-
-
-```{r corr.plots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Correlation plots for continuous variables", fig.pos="H"}
-
-# ---------------
-# CORR PLOTS
-# ---------------
-
-par(mfrow = c(1,1))  # reset plotting layout
-
-vars <- df_clean[, c("annual_kwh", "sq_meters", "dist_to_brussels", "income_euro")]
-cor_matrix <- cor(vars, use = "complete.obs")
-corrplot(cor_matrix,
-         method = "circle",
-         type = "upper",
-         addCoef.col = "black",
-         tl.col = "black",
-         tl.srt = 45)
-
-```
-
-```{r QQplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="QQ plots for continuous variables", fig.pos="H", fig.width=12, fig.height=15}
+```{r QQplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="QQ plots for continuous variables", fig.width=12, fig.height=15}
 
 # ---------------
 # QQ PLOTS
@@ -386,8 +376,7 @@ qqline(df_clean$income_euro)
 
 
 
-
-```{r QQplots_log.cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="QQ plots for log-transformed continuous variables", fig.pos="H", fig.width=12, fig.height=15, fig.show="hold"}
+```{r QQplots_log.cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="QQ plots for log-transformed continuous variables", fig.width=12, fig.height=15, fig.show="hold"}
 
 # ---------------
 # QQ PLOTS LOG 
@@ -414,7 +403,33 @@ qqline(log(df_clean$income_euro))
 ```
 
 
-```{r boxplots eng.cons vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 1)", fig.pos="H", fig.width=9, fig.height=12, fig.show="hold"}
+```{r corr.plots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Correlation plots for continuous variables"}
+
+# ---------------
+# CORR PLOTS
+# ---------------
+
+par(mfrow = c(1,1))  # reset plotting layout
+
+vars <- df_clean[, c("annual_kwh", "sq_meters", "dist_to_brussels", "income_euro")]
+cor_matrix <- cor(vars, use = "complete.obs")
+corrplot(cor_matrix,
+         method = "circle",
+         type = "upper",
+         addCoef.col = "black",
+         tl.col = "black",
+         tl.srt = 45)
+
+```
+
+
+\newpage
+
+## Relationship between Annual Energy Consumption and non-continuous variables.
+
+Among categorical and ordinal variables, EPC label and occupancy count are the most correlated to annual energy consumption. In addition, EPC label and building era are correlated with each other since the most efficient labels are clustered in the two most recent building eras. Therefore, building era might play as a confounder in the model.
+
+```{r boxplots eng.cons vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 1)", fig.pos="H", fig.width=8, fig.height=8, fig.show="hold"}
 
 # ---------------
 # BOX PLOTS
@@ -436,7 +451,7 @@ boxplot(annual_kwh ~ occupancy_count,
 ```
 
 
-```{r boxplots eng.cons vs cat_vars2, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 2)", fig.pos="H", fig.width=9, fig.height=12, fig.show="hold"}
+```{r boxplots eng.cons vs cat_vars2, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 2)", fig.pos="H", fig.width=9, fig.height=9, fig.show="hold"}
 
 layout(matrix(1:3, 3, 1))
 
@@ -447,11 +462,12 @@ boxplot(annual_kwh ~ building_era,
         ylab = "annual_kwh",
         xlab = "building_era")
 
+
 boxplot(annual_kwh ~ pet_ownership,
         data = df_clean,
         main = "Annual Energy Consumption by Pet Ownership",
         ylab = "annual_kwh",
-        xlab = "Pet Ownership")
+        xlab = "Pet_Ownership")
 
 
 boxplot(annual_kwh ~ roof_color,
@@ -461,6 +477,86 @@ boxplot(annual_kwh ~ roof_color,
         xlab = "Roof Color")
 
 ```
+
+
+```{r Bar plots cat_vars vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots predictors against each other (selected cases)", fig.pos="H", fig.width=9, fig.height=8, fig.show="hold"}
+
+layout(matrix(1:2, 2, 1))
+
+df_clean$building_era <- as.factor(df_clean$building_era)
+df_clean$epc_label <- as.factor(df_clean$epc_label)
+df_clean$occupancy_count <- as.numeric(df_clean$occupancy_count)
+
+barplot(table(df_clean$epc_label, df_clean$building_era),
+        beside = TRUE,
+        legend = TRUE,
+        main = "ECP label by Building Era",
+        ylab = "epc_label",
+        xlab = "building_era")
+
+barplot(table(df_clean$occupancy_count, df_clean$building_era),
+        beside = TRUE,
+        legend = TRUE,
+        main = "Occupancy Count Distribution by Building Era",
+        ylab = "Count",
+        xlab = "Building Era")
+
+```
+
+\newpage
+
+
+## Regression Model
+
+The initial regression model was the following:
+
+$$
+\begin{aligned}
+\text{annual\_kwh}_i =\;&
+\beta_0
++ \beta_1 \,\text{sq\_meters}_i
++ \beta_2 \,\text{income\_euro}_i
++ \beta_3 \,\text{occupancy\_count}_i
++ \beta_4 \,\text{dist\_to\_brussels}_i \\
+&+ \boldsymbol{\beta}_5 \,\text{epc\_label}_i
++ \boldsymbol{\beta}_6 \,\text{building\_era}_i
++ \boldsymbol{\beta}_7 \,\text{roof\_color}_i
++ \beta_8 \,\text{pet\_ownership}_i \\
+&+ \beta_9 (\text{income\_euro}_i \times \text{occupancy\_count}_i) \\
+&+ \boldsymbol{\beta}_{10} (\text{epc\_label}_i \times \text{sq\_meters}_i) \\
+&+ \boldsymbol{\beta}_{11} (\text{epc\_label}_i \times \text{occupancy\_count}_i) \\
+&+ \boldsymbol{\beta}_{12} (\text{epc\_label}_i \times \text{income\_euro}_i)
++ \varepsilon_i
+\end{aligned}
+$$
+
+The final model was:
+
+$$
+
+$$
+
+\newpage
+
+### Diagnostic plots: Model regressing row annual energy consumption 
+
+```{r diag.plots for model row.ann.cons, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Diagnostic plots for the selected regression model using annual energy consuption without log transformation.", fig.width=9, fig.height=8, fig.show="hold"}
+
+layout(matrix(1:4, 2, 2))
+plot(final_model)
+```
+
+\newpage
+
+### Diagnostic plots: Model regressing log-transformed annual energy consumption 
+
+```{r diag.plots, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Diagnostic plots for the selected regression model using log-transformed annual energy consuption.", fig.width=9, fig.height=8, fig.show="hold"}
+
+layout(matrix(1:4, 2, 2))
+
+plot(final_model.log)
+```
+
 
 \newpage
 
