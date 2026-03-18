@@ -46,6 +46,7 @@ library(corrplot)
 library(purrr)
 library(ggfortify)
 library(broom)
+library(multcomp)
 ```
 
 \newpage
@@ -697,6 +698,23 @@ plot(final_model.log_buil.era)
 par(mfrow = c(1,1))
 
 ```
+
+## Q2
+
+Comparison using Dunnett contrast to compare each label B-F to A, with Benjamini-Hochberg correction for multiple testing, shows that annual energy use is significantly higher in the lower EPC ratings, compared to the reference category.
+Home with a 'B' rating use approximately 9 % more energy than homes with the reference label, while 'C', 'D', 'E' and 'F' use about 17%, 27%, 37% and 48% respectively when converting to percent differences. This demonstrates a clear and consistent relationship between lower EPC ratings and energy use.
+```{R}
+m.mcp<-glht(final_model.log_buil.era,linfct=mcp(epc_label="Dunnett"))
+summary(m.mcp,test=adjusted("BH"))
+```
+## Q4
+A model with an interaction term between occupancy count and a dummy variable for high-quality EPC Rating A/B shows that the interaction term is not statistically significant with a p-value of 0.77. This signifies that there is no change in the impact on energy use if there is an increase in household occupancy. 
+```{r}
+df_clean$epc_high <- ifelse(df_clean$epc_label %in% c('A','B'),1,0)
+model_q4<-lm(log(annual_kwh)~occupancy_count*epc_high+sq_meters+building_era,df_clean)
+summary(model_q4)
+```
+
 
 
 \newpage
