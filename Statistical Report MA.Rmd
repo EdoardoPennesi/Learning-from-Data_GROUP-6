@@ -45,25 +45,23 @@ library(ggplot2)
 library(corrplot)
 library(purrr)
 library(ggfortify)
+library(broom)
 ```
 
 \newpage
 
 # Background
 
-The goal of “*Carbon Neutrality*” is gaining increasing momentum in the European political arena amid substantial indicators of an incoming climate change which might have deleterious effects at the societal, economic and, most importantly, environmental level. Household energy consumption plays a pivotal role in overall social sustainability since it accounts for a substantial share of the total energy demand in most developed countries. Within this sector, electricity consumption provides a useful proxy for household energy demand and can be put into relationship to structural characteristics of the buildings as well as the socio-economic profile of their occupants.
+The goal of “*Carbon Neutrality*” is gaining increasing momentum in the European political arena amid substantial indicators of an incoming climate change which might have deleterious effects at the societal, economic and, most importantly, environmental level. Household energy consumption plays a pivotal role in overall social sustainability since it accounts for a substantial share of the total energy demand in most developed countries. Within this sector, electricity consumption provides a useful proxy for overall household energy demand and can be put into relationship to structural characteristics of the buildings as well as the socio-economic profile of their occupants.
 
-Dwelling-related attributes such as floor area, dwelling type, construction period, and Energy Performance Certificate (EPC) labels are consistently identified as important predictors of electricity demand [@mcloughlin2013; @santin2009]. Intuitively, larger dwellings typically require more energy for lighting, heating, cooling, and appliance use, while older buildings are constructed with materials which provides poorer insulation and therefore larger heat dissipation. Nevertheless, these variables interacts with socio-economic factors. Larger households topically host a higher number of occupants, therefore they can share the consumption for heating, refrigerators and air conditioning lowering the *per capita* consumption. Similarly, high EPC label buildings are prerogative of high-income classes which might use a larger number of appliances and indulge into energy-consuming behaviours going to erode the benefits of a properly insulated house in terms of energy savings [@aydin2017]. 
-
-Using household electricity consumption as a proxy for energy demand, this cross-sectional study examines its relationship
-with building characteristics (e.g. floor area, EPC label, construction era) and socio-economic factors (number of permanent residents and annual net household income) collecting data from 2500 households in Belgium. Importantly, the study aims at characterising the interplay between EPC labels and the other factors involved in energy consumptions to provide data-driven tools to decision-makers. 
+Dwelling related attributes such as floor area, dwelling type, construction period, and Energy Performance Certificate (EPC) labels are consistently identified as important predictors of electricity demand [@mcloughlin2013; @santin2009]. Intuitively, larger dwellings typically require more energy for lighting, heating, cooling, and appliance use, while older buildings are constructed with materials which provides poorer insulation and therefore larger heat dissipation. Nevertheless, these variables interacts with socio-economic factors. Larger households topically host a higher number of occupants, therefore they can share the consumption for heating, refrigerators and air conditioning lowering the *per capita* consumption. Similarly, high EPC label buildings are prerogative of high-income classes which might use a larger number of appliances and indulge into energy-consuming behaviours going to erode the benefits of a properly insulated house in terms of energy savings [@aydin2017]. This cross-sectional study collected data from 2500 households in Belgium and examines the relationship between households electricity consumption and several predictors.
 
 
 # Data management
 
 ## Data Cleaning
 
-Three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values in the variables EPC label (`epc_label`) and annual household electricity consumption (`annual_kwh`). This step ensures that the analysis is conducted only on complete cases for the key variables of interest. None of the variables displayed missingness above 5%. Missing values in other variables were retained (see appendix) without imputation. To inspect the distribution of electricity consumption and identify potential extreme values, the observations were sorted in decreasing order of annual electricity consumption (`annual_kwh`). Five observations (row 267, 1330, 1570, 369, 12) were two orders of magnitude larger than the others (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error. 
+Three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values in the variables EPC label (`epc_label`) and annual household electricity consumption (`annual_kwh`). This step ensures that the analysis is conducted only on complete cases for the key variables of interest. Missing values in other variables were retained (see appendix) without imputation. None of the variables displayed missingness above 5%. Five observations in the`annual_kwh` (row 267, 1330, 1570, 369, 12) variable displayed values two orders of magnitude larger than the others (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error (see section 6.2 for details). 
 
 ```{r, echo=FALSE, include=FALSE, warning=F, message=F}
 data.students <- read.table("data_students.txt",header=TRUE,sep=";")
@@ -78,6 +76,8 @@ df_clean <- df_clean %>%
 ## Data Coding
 
 Variables were coded according to their type: continuous, count, ordinal, categorical, or binary. Table 1 summarizes their descriptions and coding schemes.
+
+\newpage
 
 ```{r echo=FALSE}
 data_dict <- data.frame(
@@ -104,11 +104,11 @@ data_dict <- data.frame(
   Type_Coding = c("Continuous (kWh/year)",
                   "Continuous (m²)",
                   "Ordinal: A, B, ..., F",
-                  "Ordinal: dummy coded; ref = Pre-1970",
+                  "Ordinal: ref = Pre-1970, 1970-2000, post-2000",
                   "Continuous (€/year)",
                   "Count: 1, 2, ..., n",
                   "Continuous (km)",
-                  "Categorical: e.g., red, black, other",
+                  "Categorical: red, black, other",
                   "Binary: 0 = No, 1 = Yes")
 )
 
@@ -123,16 +123,16 @@ kable(data_dict, caption = "Data Dictionary") %>%
 
 ## Categorical variables
 
-The distribution of EPC labels is relatively balanced across categories. Labels A (22.2%) and C (21.3%) are the most common, followed by B (17.6%) and D (15.7%). Lower-efficiency categories E occur less frequently, 13.6% and F 9.6% respectively. Buildings constructed between 1970 and 2000 represent 34.4% of the sample, pre-1970 buildings account for 33.1%, and post-2000 buildings make up 32.6%. Occupancy count ranges from 1 to 7 with all counts accounting approximately 14-15%. Red roofs are the most common (35.2%), followed closely by black roofs (33.3%) and other colours (31.5%). Almost one in four (39.6%) owners has a pet, while 60.4% does not. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts. Overall, the categorical variables show meaningful variation across categories. From the exploratory analysis, two categorical variables seem to correlate strongly with electricity consumption: EPC label and occupancy count. The other categorical variables do njot display an apparent correlation with electricity consumption. Summary tables and plots are presented in the appendix. 
+The distribution of EPC labels is relatively balanced across categories. Labels A (22.2%) and C (21.3%) are the most common, followed by B (17.6%) and D (15.7%). Lower-efficiency categories E occur less frequently, 13.6% and F 9.6% respectively. Buildings constructed between 1970 and 2000 represent 34.4% of the sample, pre-1970 33.1%, and post-2000 32.6%. Occupancy count ranges from 1 to 7 with all counts accounting approximately 14-15%. A breakdown is provided in the appendix. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts. From the exploratory analysis, two categorical variables seem to correlate strongly with electricity consumption: EPC label and occupancy count. The other categorical variables do not display an apparent correlation with electricity consumption. Moreover, EPC label and building era are correlated with each other since the most efficient labels are clustered in the two most recent building eras. (see section 6.4). 
 
 
 ## Continuous variables
 
-On average, households consume 5,874.76 kWh of electricity annually, with a relatively large standard deviation (2,224.25 kWh). The median consumption (5,432.07 kWh) is slightly lower than the mean, suggesting a right-skewed distribution, which is also supported by the QQ plot showing upward deviations above the diagonal line in the upper tail (see appendix). Floor area averages 158.25 m² with a standard deviation of 36.50 m², and a range from 60.26 m² to 341.30 m². The QQ plot for floor area shows only mild departures from normality. The average distance to Brussels is 62.96 km, with observations ranging from 5.11 km to 120 km. Its QQ plot indicates noticeable curvature, implying that the distribution deviates from normality, possibly reflecting clustering of households at certain distance ranges during the sampling procedure. Household income averages €48,842.90, with a standard deviation of €22,534.97 and a range from €8,487.91 to €206,367.91. As expected for this type of variable the QQ plot shows strong upper-tail deviation, suggesting positive skewness driven by high-income outliers.
+On average, households consume 5,874.76 kWh of electricity annually (outliers removed), with a relatively large standard deviation (2,224.25 kWh). The median consumption (5,432.07 kWh) is slightly lower than the mean, suggesting a right-skewed distribution, which is also supported by the QQ plot showing upward deviations above the diagonal line in the upper tail (see appendix). Floor area averages 158.25 m² with a standard deviation of 36.50 m², and a range from 60.26 m² to 341.30 m². Household income averages €48,842.90, with a standard deviation of €22,534.97 and a range from €8,487.91 to €206,367.91. As expected for this type of variable the QQ plot shows strong upper-tail deviation, suggesting positive skewness driven by high-income outliers. A breakdown for each variable is provided in section 6.2. 
 
 The correlation matrix reveals that annual electricity consumption has a moderate positive correlation with floor area (r = 0.38) and with income (r = 0.29), suggesting that larger and wealthier households tend to consume more energy. Importantly, two predictors exhibit a strong positive correlation with each other, namely floor area and income (r = 0.72). Distance to Brussels shows virtually no correlation with the other variables, suggesting that location relative to Brussels does not strongly influence household energy use, dwelling size, or income in this dataset.
 
-Summary tables and graphs are provided in the appendix.
+
 
 
 # Inferential Statistics
@@ -140,7 +140,9 @@ Summary tables and graphs are provided in the appendix.
 ## Regression model
 
 The initial model contained all variables plus interaction terms between income and number of occupants, EPC label and floor area, EPC label and
-number of occupants, and income and EPC label (see appendix). The outcome variable `annual_kwh` was initially regressed using row data. Diagnostic plots (see appendix) showed some violations of the standard assumptions. In particular, the residuals vs fitted plot indicates the presence of heteroskedasticity, with the variance of the residuals increasing for higher fitted values, and mild deviations from linearity. The outcome variable `annual_kwh` was then log transformed to ensure normal distribution. At each step, the variable whose removal produced the greatest reduction in BIC was eliminated from the model until no further decrease was observed. After applying backward stepwise selection based on the BIC, the final model retained floor area, EPC label, and the number of occupants as predictors of annual electricity consumption. The interaction terms and other covariates were removed. The final model explained approximately 89% of the variability in log-transformed annual electricity consumption. Larger homes, lower EPC ratings, and a higher number of occupants were associated with significantly higher electricity consumption.
+number of occupants, and income and EPC label. Interactions were selected based on literature and exploratory analysis. A quadratic term was considered for `occupancy_count` consistently with a possible decreasing marginal effect. Predictor retention was determined using a backward stepwise procedure based on the Bayesian Information Criterion (BIC), which favours more parsimonious models. At each step, the variable whose removal produced the greatest reduction in BIC was eliminated, and the process continued until no further decrease was observed. The outcome variable `annual_kwh` was initially regressed using row data. Diagnostic plots (see appendix) showed some violations of the standard assumptions. In particular, the residuals vs fitted plot indicates the presence of heteroskedasticity, with the variance of the residuals increasing for higher fitted values, and mild deviations from normality in the Q-Q plot. The outcome variable `annual_kwh` was then log transformed resulting an an improvement of the diagnostic plots, particularly by yielding a more symmetric residual distribution and enhancing homoskedasticity (see section 6.5).
+
+The final model retained floor area, EPC label, and the number of occupants as predictors of annual electricity consumption. The interaction terms and other covariates were removed. Nevertheless, `building_era` was retained in the model as it acts as a confounded being related to both `annual_kwh` and `epc_label` (see section 6.4 for details).
 
 
 ```{r echo=FALSE, warning=F, message=F, include=FALSE}
@@ -151,6 +153,8 @@ df_clean$roof_color <- factor(df_clean$roof_color)
 df_clean$pet_ownership <- factor(df_clean$pet_ownership)
 
 df_clean$building_era <- relevel(df_clean$building_era, ref = "Pre-1970")
+df_clean$epc_label <- relevel(df_clean$epc_label, ref = "A")
+df_clean$roof_color <- relevel(df_clean$roof_color, ref = "Red")
 
 
 full_model <- lm(
@@ -159,6 +163,7 @@ full_model <- lm(
     building_era +
     income_euro +
     occupancy_count +
+    I(occupancy_count^2) +
     dist_to_brussels +
     roof_color +
     pet_ownership +
@@ -196,6 +201,7 @@ full_model.log <- lm(
     building_era +
     income_euro +
     occupancy_count +
+    I(occupancy_count^2) +
     dist_to_brussels +
     roof_color +
     pet_ownership +
@@ -219,9 +225,30 @@ BIC(final_model.log)
 ```
 
 
+
+
+```{r echo=FALSE, warning=F, message=F, include=FALSE}
+# ------------------------------------------------
+# FORCING BUILDING ERA IN THE MODEL AS CONFOUNDER
+# ------------------------------------------------
+
+final_model.log_buil.era <- lm(
+  log(annual_kwh) ~ sq_meters +
+    epc_label +
+    building_era+
+    occupancy_count,
+  data = df_clean
+)
+
+summary(final_model.log_buil.era)
+BIC(final_model.log_buil.era)
+```
+
+The results indicate that household size is a strong predictor of electricity consumption, with each additional square meter associated with an approximate 0.38% increase in annual consumption. Compared to dwelling in energy class A, lower efficiency classes exhibit progressively higher electricity consumption, from about 7% for class B to nearly 37% for class F. Each additional occupant is responsible for around 15-16% increase in electricity consumption. No evidence a decreasing marginal effect of the number of occupants was found at 5% significance level. The final model achieved a substantially lower BIC while maintaining nearly identical R² (89%), indicating that almost all the variance in annual consumption is explained by EPC label, house size and number of occupants.
+
 ```{r echo=FALSE, warning=F, message=F}
 
-coef_table <- summary(final_model.log)$coefficients
+coef_table <- summary(final_model.log_buil.era)$coefficients
 colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value")
 
 kable(coef_table,
@@ -229,6 +256,31 @@ kable(coef_table,
       caption = "Regression results for the selected model")
 ```
 
+```{r echo=FALSE, warning=F, message=F, include=FALSE}
+
+models <- list(
+  initial_model = full_model.log,
+  final_model = final_model.log_buil.era
+)
+
+data.frame(
+  Model = names(models),
+  AIC = sapply(models, AIC),
+  BIC = sapply(models, BIC),
+  R2 = sapply(models, function(m) summary(m)$r.squared)
+)
+
+model_comp <- data.frame(
+  Model = names(models),
+  AIC = sapply(models, AIC),
+  BIC = sapply(models, BIC),
+  R2 = sapply(models, function(m) summary(m)$r.squared)
+)
+```
+
+```{r echo=FALSE, warning=F, message=F}
+kable(model_comp, digits = 3, caption = "Model comparison using AIC, BIC, and R-squared")
+```
 
 ## Contrast analysis
 
@@ -282,9 +334,11 @@ kable(pet_summary, caption = "Pet Ownership Distribution") %>% kable_styling()
 kable(occupancy_count, caption = "Occupancy Count Distribution") %>% kable_styling()
 ```
 
+\newpage
+
 ## Summary tables for continuous varibales
 
-Tables below refer to the dataset with only rows 66, 36 135 removed.
+Tables below refer to the dataset with only rows 66, 36 135 removed and the dataset after NA and outliers removed.
 
 ```{r echo=FALSE, warning=F, message=F}
 summary_table <- data.students[-c(66, 36, 135), ] %>%
@@ -310,14 +364,42 @@ summary_table <- data.students[-c(66, 36, 135), ] %>%
 
 kable(summary_table,
       digits = 2,
-      caption = "Summary Statistics for Continuous Variables")
+      caption = "Summary Statistics for Continuous Variables (row data)")
 ```
+
+```{r echo=FALSE, warning=F, message=F}
+summary_table <- data.students[-c(66, 36, 135), ] %>%
+  summarise(
+    across(
+      c(annual_kwh, sq_meters, dist_to_brussels, income_euro),
+      list(
+        Mean = ~mean(.x, na.rm = TRUE),
+        SD = ~sd(.x, na.rm = TRUE),
+        Median = ~median(.x, na.rm = TRUE),
+        IQR = ~IQR(.x, na.rm = TRUE),
+        Min = ~min(.x, na.rm = TRUE),
+        Max = ~max(.x, na.rm = TRUE)
+      )
+    )
+  ) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = c("Variable", "Statistic"),
+    names_pattern = "(.+)_(Mean|SD|Median|IQR|Min|Max)$"
+  ) %>%
+  pivot_wider(names_from = Variable, values_from = value)
+
+kable(summary_table,
+      digits = 2,
+      caption = "Summary Statistics for Continuous Variables (cleaned dataset)")
+```
+
 
 \newpage
 
 ## Summary plots for continuous varibales
 
-Figures below refer to the dataset used for the regression model from which missing values and outliers in annual energy consumption were removed as explained in section two. From the box plot we observe that several variables exhibit right-skewness and upper-tail outliers, particularly income and energy consumption. While annual energy consumption deviates significantly from normality, its log transformed analogue follows an approximate normal distribution dispute a mild deviation from the expected quantiles in the lower and upper tail.    
+Figures below refer to the dataset used for the regression model from which missing values and outliers in annual energy consumption were removed as explained in section two. From the box plot we observe that several variables exhibit right-skewness and upper-tail outliers, particularly income and energy consumption. While annual energy consumption deviates significantly from normality, its log transformed analogue follows an approximate normal distribution dispute a mild deviation from the expected quantiles in the lower and upper tail. The QQ plot for floor area shows only mild departures from normality. The average distance to Brussels is 62.96 km. Its QQ plot indicates noticeable curvature, implying that the distribution deviates from normality, possibly reflecting clustering of households at certain distance ranges during the sampling procedure. Household income QQ plot shows strong upper-tail deviation, suggesting positive skewness driven by high-income outliers.   
 
 
 ```{r boxplots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for continuous variables", fig.width=10, fig.height=8}
@@ -427,7 +509,7 @@ corrplot(cor_matrix,
 
 ## Relationship between Annual Energy Consumption and non-continuous variables.
 
-Among categorical and ordinal variables, EPC label and occupancy count are the most correlated to annual energy consumption. In addition, EPC label and building era are correlated with each other since the most efficient labels are clustered in the two most recent building eras. Therefore, building era might play as a confounder in the model.
+Among categorical and ordinal variables, EPC label and occupancy count are the most correlated to annual energy consumption. In addition, EPC label and building era are correlated with each other since the most efficient labels are clustered in the two most recent building eras and most recent buildings. Therefore, building era might play as a confounder in the model.
 
 ```{r boxplots eng.cons vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 1)", fig.pos="H", fig.width=8, fig.height=8, fig.show="hold"}
 
@@ -435,7 +517,7 @@ Among categorical and ordinal variables, EPC label and occupancy count are the m
 # BOX PLOTS
 # ---------------
 
-layout(matrix(1:2, 2, 1))
+par(mfrow = c(2,1))
 
 boxplot(annual_kwh ~ epc_label,
         data = df_clean,
@@ -451,10 +533,9 @@ boxplot(annual_kwh ~ occupancy_count,
 ```
 
 
-```{r boxplots eng.cons vs cat_vars2, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 2)", fig.pos="H", fig.width=9, fig.height=9, fig.show="hold"}
+```{r boxplots eng.cons vs cat_vars2, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 2)", fig.pos="H", fig.width=8, fig.height=8, fig.show="hold"}
 
-layout(matrix(1:3, 3, 1))
-
+par(mfrow = c(2,1))
 
 boxplot(annual_kwh ~ building_era,
         data = df_clean,
@@ -469,19 +550,25 @@ boxplot(annual_kwh ~ pet_ownership,
         ylab = "annual_kwh",
         xlab = "Pet_Ownership")
 
+```
+
+```{r boxplots eng.cons vs cat_vars3, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 3)", fig.pos="H", fig.width=8, fig.height=4, fig.show="hold"}
+
+par(mfrow = c(1,1))
 
 boxplot(annual_kwh ~ roof_color,
         data = df_clean,
         main = "Annual Energy Consumption by Roof Color",
         ylab = "annual_kwh",
         xlab = "Roof Color")
-
 ```
 
 
-```{r Bar plots cat_vars vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots predictors against each other (selected cases)", fig.pos="H", fig.width=9, fig.height=8, fig.show="hold"}
+\newpage
 
-layout(matrix(1:2, 2, 1))
+```{r Bar plots cat_vars vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots predictors against each other (selected cases)", fig.pos="H", fig.width=9, fig.height=8}
+
+par(mfrow = c(2,1))
 
 df_clean$building_era <- as.factor(df_clean$building_era)
 df_clean$epc_label <- as.factor(df_clean$epc_label)
@@ -492,19 +579,20 @@ barplot(table(df_clean$epc_label, df_clean$building_era),
         legend = TRUE,
         main = "ECP label by Building Era",
         ylab = "epc_label",
-        xlab = "building_era")
+        xlab = "count")
 
 barplot(table(df_clean$occupancy_count, df_clean$building_era),
         beside = TRUE,
         legend = TRUE,
         main = "Occupancy Count Distribution by Building Era",
-        ylab = "Count",
+        ylab = "count",
         xlab = "Building Era")
+
+par(mfrow = c(1,1))
 
 ```
 
 \newpage
-
 
 ## Regression Model
 
@@ -525,7 +613,8 @@ $$
 &+ \beta_9 (\text{income\_euro}_i \times \text{occupancy\_count}_i) \\
 &+ \boldsymbol{\beta}_{10} (\text{epc\_label}_i \times \text{sq\_meters}_i) \\
 &+ \boldsymbol{\beta}_{11} (\text{epc\_label}_i \times \text{occupancy\_count}_i) \\
-&+ \boldsymbol{\beta}_{12} (\text{epc\_label}_i \times \text{income\_euro}_i)
+&+ \boldsymbol{\beta}_{12} (\text{epc\_label}_i \times \text{income\_euro}_i) \\
+&+ \boldsymbol{\beta}_{13} (\text{occupancy\_count}_i^2)
 + \varepsilon_i
 \end{aligned}
 $$
@@ -533,8 +622,59 @@ $$
 The final model was:
 
 $$
-
+\begin{aligned}
+\log\text{annual\_kwh}_i =\;&
+\beta_0
++ \beta_1 \,\text{sq\_meters}_i
++ \beta_2 \,\text{occupancy\_count}_i
++ \beta_3 \,\text{epc\_label}_i
++ \beta_4 \,\text{building\_era}_i
++ \varepsilon_i
+\end{aligned}
 $$
+
+## Directed acyclic graph (DAG)
+
+Building era was treated as a confounder in the relationship between EPC label and electricity consumption since it is related to both: the main predictor and the outcome variable.
+
+Income was treated as a mediator in the relationship between EPC electricity consumption and size of the households since people with higher income can afford larger dwellings which in turn consume more electricity. 
+
+```{r DAGs, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Directed acyclic graphs (DAGs)", fig.width=9, fig.height=5}
+
+library(dagitty)
+library(ggdag)
+library(ggplot2)
+library(patchwork)
+
+# DAG 1: Confounder
+dag_confounder <- dagitty("
+dag {
+  building_era -> epc_label
+  building_era -> annual_kwh
+  epc_label -> annual_kwh
+}
+")
+
+p1 <- ggdag(dag_confounder, text = TRUE, use_labels = "name") +
+  theme_dag() +
+  ggtitle("Building Era as a Confounder")
+
+# DAG 2: Mediator
+dag_mediator <- dagitty("
+dag {
+  income -> sq_meters
+  sq_meters -> annual_kwh
+}
+")
+
+p2 <- ggdag(dag_mediator, text = TRUE, use_labels = "name") +
+  theme_dag() +
+  ggtitle("Income as a Mediator")
+
+# Combine plots
+p1 + p2
+```
+
 
 \newpage
 
@@ -542,7 +682,7 @@ $$
 
 ```{r diag.plots for model row.ann.cons, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Diagnostic plots for the selected regression model using annual energy consuption without log transformation.", fig.width=9, fig.height=8, fig.show="hold"}
 
-layout(matrix(1:4, 2, 2))
+par(mfrow = c(2,2))
 plot(final_model)
 ```
 
@@ -552,9 +692,10 @@ plot(final_model)
 
 ```{r diag.plots, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Diagnostic plots for the selected regression model using log-transformed annual energy consuption.", fig.width=9, fig.height=8, fig.show="hold"}
 
-layout(matrix(1:4, 2, 2))
+par(mfrow = c(2,2))
+plot(final_model.log_buil.era)
+par(mfrow = c(1,1))
 
-plot(final_model.log)
 ```
 
 
