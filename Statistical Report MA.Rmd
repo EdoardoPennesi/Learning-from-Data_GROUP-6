@@ -24,6 +24,7 @@ geometry: margin=1in
 header-includes:
   - \usepackage{pdflscape}
   - \usepackage{float}
+  - \usepackage{placeins}
 ---
 
 
@@ -143,7 +144,7 @@ The correlation matrix reveals that annual electricity consumption has a moderat
 The initial model contained all variables plus interaction terms between income and number of occupants, EPC label and floor area, EPC label and
 number of occupants, and income and EPC label. Interactions were selected based on literature and exploratory analysis. A quadratic term was considered for `occupancy_count` consistently with a possible decreasing marginal effect. Predictor retention was determined using a backward stepwise procedure based on the Bayesian Information Criterion (BIC), which favours more parsimonious models. At each step, the variable whose removal produced the greatest reduction in BIC was eliminated, and the process continued until no further decrease was observed. The outcome variable `annual_kwh` was initially regressed using row data. Diagnostic plots (see appendix) showed some violations of the standard assumptions. In particular, the residuals vs fitted plot indicates the presence of heteroskedasticity, with the variance of the residuals increasing for higher fitted values, and mild deviations from normality in the Q-Q plot. The outcome variable `annual_kwh` was then log transformed resulting an an improvement of the diagnostic plots, particularly by yielding a more symmetric residual distribution and enhancing homoskedasticity (see section 6.5).
 
-The final model retained floor area, EPC label, and the number of occupants as predictors of annual electricity consumption. The interaction terms and other covariates were removed. Nevertheless, `building_era` was retained in the model as it acts as a confounded being related to both `annual_kwh` and `epc_label` (see section 6.4 for details).
+The final model retained floor area, EPC label, and the number of occupants as predictors of annual electricity consumption. The interaction terms and other covariates were removed. Nevertheless, `building_era` was retained in the model as it acts as a confounded being related to both `annual_kwh` and `epc_label` (see section 6.4 for details). Regression results for the initial full model are reported in the apendix for comparison. 
 
 
 ```{r echo=FALSE, warning=F, message=F, include=FALSE}
@@ -250,44 +251,81 @@ The results indicate that household size is a strong predictor of electricity co
 ```{r echo=FALSE, warning=F, message=F}
 
 coef_table <- summary(final_model.log_buil.era)$coefficients
-colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value")
+ci <- confint(final_model.log_buil.era)
+
+# Combine results
+coef_table <- cbind(coef_table, ci)
+
+# Rename columns
+colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value", "CI 2.5%", "CI 97.5%")
 
 kable(coef_table,
       digits = 5,
-      caption = "Regression results for the selected model")
-```
-
-```{r echo=FALSE, warning=F, message=F, include=FALSE}
-
-models <- list(
-  initial_model = full_model.log,
-  final_model = final_model.log_buil.era
-)
-
-data.frame(
-  Model = names(models),
-  AIC = sapply(models, AIC),
-  BIC = sapply(models, BIC),
-  R2 = sapply(models, function(m) summary(m)$r.squared)
-)
-
-model_comp <- data.frame(
-  Model = names(models),
-  AIC = sapply(models, AIC),
-  BIC = sapply(models, BIC),
-  R2 = sapply(models, function(m) summary(m)$r.squared)
-)
-```
-
-```{r echo=FALSE, warning=F, message=F}
-kable(model_comp, digits = 3, caption = "Model comparison using AIC, BIC, and R-squared")
+      caption = "Regression results for the final model (with 95% CI)")
 ```
 
 ## Contrast analysis
 
-- for research question 2 and 4
+Comparison using Dunnett contrast to compare each label B-F to A, with Benjamini-Hochberg correction for multiple testing, shows that annual energy use is significantly higher in the lower EPC ratings, compared to the reference category. Homes with a 'B' rating use approximately 9 % more energy than homes with the reference label, while 'C', 'D', 'E' and 'F' use about 17%, 27%, 37% and 48% respectively when converting to percent differences. This demonstrates a clear and consistent relationship between lower EPC ratings and energy use.
+
+```{r echo=FALSE, warning=F, message=F, include=FALSE}
+
+m.mcp<-glht(final_model.log_buil.era,linfct=mcp(epc_label="Dunnett"))
+summary(m.mcp,test=adjusted("BH"))
+```
+
+
+```{r echo=FALSE, warning=F, message=F}
+
+contrast.results <- summary(m.mcp)
+coef_table <- data.frame(
+  Estimate = contrast.results$test$coefficients,
+  "Std. Error" = contrast.results$test$sigma,
+  "t value" = contrast.results$test$tstat,
+  "p-value" = contrast.results$test$pvalues
+)
+
+ci <- confint(m.mcp)$confint
+
+coef_table <- cbind(coef_table, ci)
+coef_table <- coef_table[, -c(5, 8,9,10)]
+
+colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value",
+                         "CI 2.5%", "CI 97.5%")
+
+kable(coef_table,
+      digits = 4,
+      caption = "Contrast results for the EPC Labels")
+```
+
+A model with an interaction term between occupancy count and a dummy variable for high-quality EPC label A-B was built to investigate whether the effect of EPC label is dependent on the number of occupants. The analysis shows that the interaction term is not statistically significant with a p-value of 0.77. This signifies that there the effect of a proper insulation on electricity consumption does not change with the number of occupants.
+
+```{r echo=FALSE, warning=F, message=F, include=FALSE}
+df_clean$epc_high <- ifelse(df_clean$epc_label %in% c('A','B'),1,0)
+
+model_q4<-lm(log(annual_kwh)~occupancy_count*epc_high+sq_meters+building_era,df_clean)
+
+q4.results <- summary(model_q4)
+```
+
+```{r echo=FALSE, warning=F, message=F}
+
+q4.results <- summary(model_q4)
+
+coef_table <- as.data.frame(q4.results$coefficients)
+
+colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value")
+
+kable(coef_table,
+      digits = 4,
+      caption = "Results Interaction between EPC Label and Occupancy Count")
+```
+
 
 # Conclusions
+
+The present analysis shows that, as already confirmed by literature, EPC label and number of occupants are the most relevant predictors of annual electricity consumption. Compared to dwelling in energy class A, lower efficiency classes exhibit progressively higher electricity consumption, from about 7% for class B to nearly 37% for class F. Each additional occupant
+is responsible for a linear increase in electricity consumption of about 16%. Among the possible shortcomings of this study is that it considers only electricity consumption while in the overall energy consumption also gas represent a relevant quota. Actually, most heating systems are still powered by gas (methane) and heating is probably the most "shared" consumption in a household. This might explain why the expected reduced marginal contribution of additional occupants in the house was not apparent in this analysis. We also found that the difference among EPC labels is not evenly spaced. The gains in energy saving are much more sublets between EPC label A and B than among C to E and again only small between E and F. Income seems to be relevant as a mediator. Richer families tend to buy larger apartments and better insulated. The latter factors influence the electricity consumption.   
 
 
 \newpage
@@ -486,31 +524,13 @@ qqline(log(df_clean$income_euro))
 ```
 
 
-```{r corr.plots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Correlation plots for continuous variables"}
-
-# ---------------
-# CORR PLOTS
-# ---------------
-
-par(mfrow = c(1,1))  # reset plotting layout
-
-vars <- df_clean[, c("annual_kwh", "sq_meters", "dist_to_brussels", "income_euro")]
-cor_matrix <- cor(vars, use = "complete.obs")
-corrplot(cor_matrix,
-         method = "circle",
-         type = "upper",
-         addCoef.col = "black",
-         tl.col = "black",
-         tl.srt = 45)
-
-```
-
 
 \newpage
 
 ## Relationship between Annual Energy Consumption and non-continuous variables.
 
 Among categorical and ordinal variables, EPC label and occupancy count are the most correlated to annual energy consumption. In addition, EPC label and building era are correlated with each other since the most efficient labels are clustered in the two most recent building eras and most recent buildings. Therefore, building era might play as a confounder in the model.
+
 
 ```{r boxplots eng.cons vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Box plots for annual energy consumption vs categorical variables (part 1)", fig.pos="H", fig.width=8, fig.height=8, fig.show="hold"}
 
@@ -564,16 +584,20 @@ boxplot(annual_kwh ~ roof_color,
         xlab = "Roof Color")
 ```
 
+## Causal Relationships Among Variables
 
-\newpage
+Building era was treated as a confounder in the relationship between EPC label and electricity consumption since it is related to both: the main predictor and the outcome variable.
 
-```{r Bar plots cat_vars vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots predictors against each other (selected cases)", fig.pos="H", fig.width=9, fig.height=8}
+Income was treated as a mediator in the relationship between EPC electricity consumption and size of the households since people with higher income can afford larger dwellings which in turn consume more electricity. Indeed, the income and apartment size are strongly correlated (rho=0.72).
+
+```{r Bar plots cat_vars vs cat_vars, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots predictors against each other (selected cases)", fig.pos="H", fig.width=7, fig.height=7}
 
 par(mfrow = c(2,1))
 
 df_clean$building_era <- as.factor(df_clean$building_era)
 df_clean$epc_label <- as.factor(df_clean$epc_label)
-df_clean$occupancy_count <- as.numeric(df_clean$occupancy_count)
+df_clean$occupancy_count <- as.factor(df_clean$occupancy_count)
+cols2 <- gray.colors(length(levels(df_clean$occupancy_count)))
 
 barplot(table(df_clean$epc_label, df_clean$building_era),
         beside = TRUE,
@@ -584,61 +608,70 @@ barplot(table(df_clean$epc_label, df_clean$building_era),
 
 barplot(table(df_clean$occupancy_count, df_clean$building_era),
         beside = TRUE,
-        legend = TRUE,
+        col = cols2,
         main = "Occupancy Count Distribution by Building Era",
-        ylab = "count",
+        ylab = "Count",
         xlab = "Building Era")
+
+legend("topright",
+       legend = levels(df_clean$occupancy_count),
+       fill = cols2,
+       horiz = TRUE,
+       xpd = TRUE,
+       cex = 0.8,
+       bty = "n")
+
 
 par(mfrow = c(1,1))
 
 ```
 
-\newpage
 
-## Regression Model
+```{r Bar plots income_EPC, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots of EPC label class by Income percentile", fig.pos="H", fig.width=7, fig.height=7}
 
-The initial regression model was the following:
+df_clean$income_q <- cut(
+  df_clean$income,
+  breaks = quantile(df_clean$income, probs = seq(0, 1, 0.2), na.rm = TRUE),
+  include.lowest = TRUE,
+  labels = c("Q1 (lowest)", "Q2", "Q3", "Q4", "Q5 (highest)")
+)
 
-$$
-\begin{aligned}
-\text{annual\_kwh}_i =\;&
-\beta_0
-+ \beta_1 \,\text{sq\_meters}_i
-+ \beta_2 \,\text{income\_euro}_i
-+ \beta_3 \,\text{occupancy\_count}_i
-+ \beta_4 \,\text{dist\_to\_brussels}_i \\
-&+ \boldsymbol{\beta}_5 \,\text{epc\_label}_i
-+ \boldsymbol{\beta}_6 \,\text{building\_era}_i
-+ \boldsymbol{\beta}_7 \,\text{roof\_color}_i
-+ \beta_8 \,\text{pet\_ownership}_i \\
-&+ \beta_9 (\text{income\_euro}_i \times \text{occupancy\_count}_i) \\
-&+ \boldsymbol{\beta}_{10} (\text{epc\_label}_i \times \text{sq\_meters}_i) \\
-&+ \boldsymbol{\beta}_{11} (\text{epc\_label}_i \times \text{occupancy\_count}_i) \\
-&+ \boldsymbol{\beta}_{12} (\text{epc\_label}_i \times \text{income\_euro}_i) \\
-&+ \boldsymbol{\beta}_{13} (\text{occupancy\_count}_i^2)
-+ \varepsilon_i
-\end{aligned}
-$$
+cols <- gray.colors(length(levels(df_clean$epc_label)))
 
-The final model was:
+barplot(table(df_clean$income_q, df_clean$epc_label),
+        beside = TRUE,
+        col = cols,
+        main = "EPC Label Distribution by Income Quintile",
+        ylab = "Count",
+        xlab = "Income Quintile")
+        
+legend("topright",
+       legend = levels(df_clean$epc_label),
+       fill = cols,
+       cex = 0.8,
+       bty = "n")
+```
 
-$$
-\begin{aligned}
-\log\text{annual\_kwh}_i =\;&
-\beta_0
-+ \beta_1 \,\text{sq\_meters}_i
-+ \beta_2 \,\text{occupancy\_count}_i
-+ \beta_3 \,\text{epc\_label}_i
-+ \beta_4 \,\text{building\_era}_i
-+ \varepsilon_i
-\end{aligned}
-$$
 
-## Directed acyclic graph (DAG)
+```{r corr.plots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Correlation plots for continuous variables"}
 
-Building era was treated as a confounder in the relationship between EPC label and electricity consumption since it is related to both: the main predictor and the outcome variable.
+# ---------------
+# CORR PLOTS
+# ---------------
 
-Income was treated as a mediator in the relationship between EPC electricity consumption and size of the households since people with higher income can afford larger dwellings which in turn consume more electricity. 
+par(mfrow = c(1,1))  # reset plotting layout
+
+vars <- df_clean[, c("annual_kwh", "sq_meters", "dist_to_brussels", "income_euro")]
+cor_matrix <- cor(vars, use = "complete.obs")
+corrplot(cor_matrix,
+         method = "circle",
+         type = "upper",
+         addCoef.col = "black",
+         tl.col = "black",
+         tl.srt = 45)
+
+```
+
 
 ```{r DAGs, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Directed acyclic graphs (DAGs)", fig.width=9, fig.height=5}
 
@@ -677,6 +710,107 @@ p1 + p2
 ```
 
 
+
+\clearpage
+
+## Regression Model
+
+The initial regression model was the following:
+
+$$
+\begin{aligned}
+\text{annual\_kwh}_i =\;&
+\beta_0
++ \beta_1 \,\text{sq\_meters}_i
++ \beta_2 \,\text{income\_euro}_i
++ \beta_3 \,\text{occupancy\_count}_i
++ \beta_4 \,\text{dist\_to\_brussels}_i \\
+&+ \boldsymbol{\beta}_5 \,\text{epc\_label}_i
++ \boldsymbol{\beta}_6 \,\text{building\_era}_i
++ \boldsymbol{\beta}_7 \,\text{roof\_color}_i
++ \beta_8 \,\text{pet\_ownership}_i \\
+&+ \beta_9 (\text{income\_euro}_i \times \text{occupancy\_count}_i) \\
+&+ \boldsymbol{\beta}_{10} (\text{epc\_label}_i \times \text{sq\_meters}_i) \\
+&+ \boldsymbol{\beta}_{11} (\text{epc\_label}_i \times \text{occupancy\_count}_i) \\
+&+ \boldsymbol{\beta}_{12} (\text{epc\_label}_i \times \text{income\_euro}_i) \\
+&+ \boldsymbol{\beta}_{13} (\text{occupancy\_count}_i^2)
++ \varepsilon_i
+\end{aligned}
+$$
+
+The final model retained the following predictors:
+
+$$
+\begin{aligned}
+\log\text{annual\_kwh}_i =\;&
+\beta_0
++ \beta_1 \,\text{sq\_meters}_i
++ \beta_2 \,\text{occupancy\_count}_i
++ \beta_3 \,\text{epc\_label}_i
++ \beta_4 \,\text{building\_era}_i
++ \varepsilon_i
+\end{aligned}
+$$
+
+
+### Regression Results Summary Tables: Initial vs Final model
+
+
+```{r echo=FALSE, warning=F, message=F}
+
+coef_table <- summary(full_model.log)$coefficients
+colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value")
+
+kable(coef_table,
+      digits = 5,
+      caption = "Regression results for the full model (starting model)")
+```
+
+
+```{r echo=FALSE, warning=F, message=F}
+
+coef_table <- summary(final_model.log_buil.era)$coefficients
+ci <- confint(final_model.log_buil.era)
+
+# Combine results
+coef_table <- cbind(coef_table, ci)
+
+# Rename columns
+colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value", "CI 2.5%", "CI 97.5%")
+
+kable(coef_table,
+      digits = 5,
+      caption = "Regression results for the final model (with 95% CI)")
+```
+
+```{r echo=FALSE, warning=F, message=F, include=FALSE}
+
+models <- list(
+  initial_model = full_model.log,
+  final_model = final_model.log_buil.era
+)
+
+data.frame(
+  Model = names(models),
+  AIC = sapply(models, AIC),
+  BIC = sapply(models, BIC),
+  R2 = sapply(models, function(m) summary(m)$r.squared)
+)
+
+model_comp <- data.frame(
+  Model = names(models),
+  AIC = sapply(models, AIC),
+  BIC = sapply(models, BIC),
+  R2 = sapply(models, function(m) summary(m)$r.squared)
+)
+```
+
+```{r echo=FALSE, warning=F, message=F}
+kable(model_comp, digits = 3, caption = "Model comparison (initial vs. final) using AIC, BIC, and R-squared")
+```
+
+
+
 \newpage
 
 ### Diagnostic plots: Model regressing row annual energy consumption 
@@ -698,23 +832,6 @@ plot(final_model.log_buil.era)
 par(mfrow = c(1,1))
 
 ```
-
-## Q2
-
-Comparison using Dunnett contrast to compare each label B-F to A, with Benjamini-Hochberg correction for multiple testing, shows that annual energy use is significantly higher in the lower EPC ratings, compared to the reference category.
-Home with a 'B' rating use approximately 9 % more energy than homes with the reference label, while 'C', 'D', 'E' and 'F' use about 17%, 27%, 37% and 48% respectively when converting to percent differences. This demonstrates a clear and consistent relationship between lower EPC ratings and energy use.
-```{R}
-m.mcp<-glht(final_model.log_buil.era,linfct=mcp(epc_label="Dunnett"))
-summary(m.mcp,test=adjusted("BH"))
-```
-## Q4
-A model with an interaction term between occupancy count and a dummy variable for high-quality EPC Rating A/B shows that the interaction term is not statistically significant with a p-value of 0.77. This signifies that there is no change in the impact on energy use if there is an increase in household occupancy. 
-```{r}
-df_clean$epc_high <- ifelse(df_clean$epc_label %in% c('A','B'),1,0)
-model_q4<-lm(log(annual_kwh)~occupancy_count*epc_high+sq_meters+building_era,df_clean)
-summary(model_q4)
-```
-
 
 
 \newpage
