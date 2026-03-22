@@ -597,29 +597,39 @@ par(mfrow = c(2,1))
 df_clean$building_era <- as.factor(df_clean$building_era)
 df_clean$epc_label <- as.factor(df_clean$epc_label)
 df_clean$occupancy_count <- as.factor(df_clean$occupancy_count)
-cols2 <- gray.colors(length(levels(df_clean$occupancy_count)))
+
+cols2 <- gray.colors(length(levels(df_clean$epc_label)))
 
 barplot(table(df_clean$epc_label, df_clean$building_era),
         beside = TRUE,
-        legend = TRUE,
         main = "ECP label by Building Era",
-        ylab = "epc_label",
-        xlab = "count")
+        ylab = "count",
+        xlab = "Building Era")
+
+legend("topright",
+       inset = c(-0.05, 0),   # move right
+       legend = levels(df_clean$epc_label),
+       fill = cols2,
+       cex = 0.8,
+       bty = "n",
+       xpd = TRUE)   
+
+cols3 <- gray.colors(length(levels(df_clean$building_era)))
 
 barplot(table(df_clean$occupancy_count, df_clean$building_era),
         beside = TRUE,
-        col = cols2,
+        col = cols3,
         main = "Occupancy Count Distribution by Building Era",
         ylab = "Count",
         xlab = "Building Era")
 
 legend("topright",
+       inset = c(-0.05, 0),   # move right
        legend = levels(df_clean$occupancy_count),
-       fill = cols2,
-       horiz = TRUE,
-       xpd = TRUE,
+       fill = cols3,
        cex = 0.8,
-       bty = "n")
+       bty = "n",
+       xpd = TRUE)   
 
 
 par(mfrow = c(1,1))
@@ -627,33 +637,66 @@ par(mfrow = c(1,1))
 ```
 
 
-```{r Bar plots income_EPC, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots of EPC label class by Income percentile", fig.pos="H", fig.width=7, fig.height=7}
+```{r Bar plots income_EPC, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots of EPC label class by Income percentile", fig.pos="H", fig.width=4, fig.height=4}
 
 df_clean$income_q <- cut(
   df_clean$income,
   breaks = quantile(df_clean$income, probs = seq(0, 1, 0.2), na.rm = TRUE),
   include.lowest = TRUE,
-  labels = c("Q1 (lowest)", "Q2", "Q3", "Q4", "Q5 (highest)")
+  labels = c("Q1", "Q2", "Q3", "Q4", "Q5")
 )
 
+tab <- table(df_clean$income_q, df_clean$epc_label)
 cols <- gray.colors(length(levels(df_clean$epc_label)))
 
-barplot(table(df_clean$income_q, df_clean$epc_label),
-        beside = TRUE,
-        col = cols,
-        main = "EPC Label Distribution by Income Quintile",
-        ylab = "Count",
-        xlab = "Income Quintile")
+
+bp <- barplot(t(tab),
+              beside = TRUE,
+              col = cols,
+              main = "EPC Label Distribution by Income",
+              ylab = "Count",
+              xlab = "Income Quintile",
+              names.arg = levels(df_clean$income_q))
         
 legend("topright",
+       inset = c(-0.1, 0),   # move right
        legend = levels(df_clean$epc_label),
        fill = cols,
        cex = 0.8,
-       bty = "n")
+       bty = "n",
+       xpd = TRUE)    
 ```
 
 
-```{r corr.plots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Correlation plots for continuous variables"}
+```{r Bar plots sq_meters, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Bar plots of Electricity Energy Consumption class by household size percentile", fig.pos="H", fig.width=4, fig.height=4}
+
+df_clean$sq_meters_q <- cut(
+  df_clean$sq_meters,
+  breaks = quantile(df_clean$sq_meters, probs = seq(0, 1, 0.2), na.rm = TRUE),
+  include.lowest = TRUE,
+  labels = c("Q1", "Q2", "Q3", "Q4", "Q5")
+)
+
+```
+
+\clearpage
+
+```{r echo=FALSE, warning=F, message=F}
+
+tab_mean <- tapply(df_clean$annual_kwh,
+                   list(Size = df_clean$sq_meters_q,
+                        Income = df_clean$income_q),
+                   mean,
+                   na.rm = TRUE)
+kable(tab_mean,
+      caption = "Mean Annual Energy Consumption by Size and Income Quintiles",
+      digits = 0,
+      row.names = TRUE) %>%
+  kableExtra::add_header_above(c(" " = 1, "Income Quintiles" = ncol(tab_mean)))
+
+```
+
+```{r corr.plots_cont, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Correlation plots for continuous variables", fig.width=6, fig.height=6}
 
 # ---------------
 # CORR PLOTS
