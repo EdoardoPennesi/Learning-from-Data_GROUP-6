@@ -25,7 +25,6 @@ df_clean$building_era <- as.factor(df_clean$building_era)
 df_clean$roof_color <- as.factor(df_clean$roof_color)
 df_clean$pet_ownership <- as.factor(df_clean$pet_ownership)
 
-
 ##
 head(df_clean[order(-df_clean$annual_kwh), ], 10)
 df_clean_a <- df_clean %>%
@@ -240,5 +239,78 @@ corrplot(
   tl.cex = 0.8,
   number.cex = 0.7
 )
+```
+
+```{r}
+mc<-lm(formula = log(annual_kwh) ~ sq_meters + epc_label+ building_era+ occupancy_count +income_euro+dist_to_brussels, 
+    data = df_clean_a)
+mc1<-lm(formula = log(annual_kwh) ~ sq_meters + epc_label+ building_era+ occupancy_count +income_euro, 
+    data = df_clean_a)
+mc2<-lm(formula = log(annual_kwh) ~ sq_meters + epc_label+ building_era+ occupancy_count,
+        data = df_clean_a)
+mc3<-lm(formula = log(annual_kwh) ~ sq_meters + epc_label+ occupancy_count, 
+    data = df_clean_a)
+summary(mc)
+summary(mc1)
+summary(mc2)
+summary(mc3)
+##
+anova(mc3, mc2, mc1, mc)
+BIC(mc3, mc2, mc1, mc)
+```
+```{r}
+table(df_clean_a$epc_label,df_clean_a$building_era)
+chisq.test(table(df_clean_a$epc_label, df_clean_a$building_era))
+```
+```{r}
+lm(log(annual_kwh) ~ building_era, data = df_clean_a)%>%
+  summary()
+lm(log(annual_kwh) ~ building_era+epc_label, data = df_clean_a)%>%
+  summary()
+boxplot(log(annual_kwh) ~ building_era, data = df_clean_a)
+```
+
+```{r}
+lm(log(annual_kwh) ~ income_euro, data = df_clean_a)%>%
+  summary()
+lm(log(annual_kwh) ~ income_euro+sq_meters, data = df_clean_a)%>%
+  summary()
+##
+ggplot(df_clean_a, aes(x = income_euro, y = log(annual_kwh))) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm") +
+  labs(
+    x = "Income (Euro)",
+    y = "Log Annual kWh",
+    title = "Relationship between Income and Energy Consumption"
+  ) +
+  theme_minimal()
+###
+plot(df_clean_a$income_euro, df_clean_a$sq_meters,
+     xlab = "Income (Euro)",
+     ylab = "SQ-meters",
+     pch = )
+```
+```{r}
+plot(df_clean_a$income_euro, df_clean_a$occupancy_count,
+     xlab = "Income (Euro)",
+     ylab = "Count",
+     pch = )
+```
+
+```{r}
+plot(df_clean_a$dist_to_brussels , df_clean_a$occupancy_count,
+     xlab = "Distance to Brussel",
+     ylab = "Count",
+     pch = )
+```
+
+```{r}
+boxplot(log(annual_kwh) ~ roof_color, data = df_clean_a)
+boxplot(log(annual_kwh) ~ pet_ownership, data = df_clean_a)
+```
+```{r}
+lm(formula = log(annual_kwh) ~ sq_meters+ epc_label+building_era+occupancy_count+income_euro, data = df_clean_a)%>%
+  summary()
 ```
 
