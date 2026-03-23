@@ -235,6 +235,8 @@ BIC(final_model.log_buil.era)
 
 The results indicate that household size is a strong predictor of electricity consumption, with each additional square meter associated with an approximate 0.38% increase in annual consumption. Compared to dwelling in energy class A, lower efficiency classes exhibit progressively higher electricity consumption, from about 7% for class B to nearly 37% for class F. Each additional occupant is responsible for around 15-16% increase in electricity consumption. No evidence a decreasing marginal effect of the number of occupants was found at 5% significance level. The final model achieved a substantially lower BIC while maintaining nearly identical adjusted R² (89%), indicating that almost all the variance in annual consumption is explained by EPC label, house size and number of occupants.
 
+It seems that annual electricity consumption is more behavior-dependent rather than driven by house size. Keeping the other predictors (floor area, EPC labels, and building era) fixed, for each additional household occupant, consumption increases by about 16%. There is also lower power consumption in EPC A-labeled houses by approximately 48% compared to the lowest-labeled houses, adjusted for building era. Finally, although it is statistically significant, the effect of floor area is very small (0.40% per additional square meter), resulting in an overall increase of about 18.7% across the interquartile range (46.71 square meters). 
+
 ```{r echo=FALSE, warning=F, message=F}
 
 coef_table <- summary(final_model.log_buil.era)$coefficients
@@ -253,7 +255,7 @@ kable(coef_table,
 
 ## Contrast analysis
 
-Comparison using Dunnett contrast to compare each label B-F to A, with Benjamini-Hochberg correction for multiple testing, shows that annual energy use is significantly higher in the lower EPC ratings, compared to the reference category. Homes with a 'B' rating use approximately 9 % more energy than homes with the reference label, while 'C', 'D', 'E' and 'F' use about 17%, 27%, 37% and 48% respectively when converting to percent differences. This demonstrates a clear and consistent relationship between lower EPC ratings and energy use.
+Comparison using Dunnett contrast to compare each label B-F to A, with Benjamini-Hochberg correction for multiple testing, shows that annual energy use is significantly higher in the lower EPC ratings, compared to the reference category. Houses with a 'B' rating use approximately 9 % more energy than homes with the reference label, while 'C', 'D', 'E' and 'F' use about 17%, 27%, 37% and 48%, respectively, when converting to percent differences. This demonstrates a clear and consistent relationship between lower EPC ratings and energy use.
 
 ```{r echo=FALSE, warning=F, message=F, include=FALSE}
 
@@ -288,18 +290,122 @@ kable(coef_table,
 modelincom <- lm(formula = log(annual_kwh) ~ sq_meters + epc_label+ building_era+ occupancy_count +income_euro, 
     data = df_clean)
 summary(modelincom)
+vif(modelincom)
 BIC(modelincom, final_model.log_buil.era)
 ```
-The total annual net household income was removed from the model due to not adding any improvement in the model. While the adjusted R2 remained as in the main. model, the BIC value increased by 7; suggesting less fitted model. 
-Although the income seems a meaningful predictor for annual power consumption from real life scenrio, it has no effect in our model.  
-A model with an interaction term between occupancy count and a dummy variable for high-quality EPC label A-B was built to investigate whether the effect of EPC label is dependent on the number of occupants. The analysis shows that the interaction term is not statistically significant with a p-value of 0.77. This signifies that there the effect of a proper insulation on electricity consumption does not change with the number of occupants.
+The total annual household income was removed from the model due to not adding any improvement in the model. While the adjusted R2 remained as in the main. model, the BIC value increased by 7 units; suggesting less supported model. 
+Income appears to be a meaningful predictor of annual power consumption based on real-life considerations and prior knowledge (i.e., higher income is associated with more devices and higher power use). This was significant in the model before adjusting for the floor area. However, after including floor area in the model the effect of income attenuated and became non-significant. This could be due to that both covariates are sharing simialr information. There is a positive correlation between annual power consumption and total income, as well as between annual power consumption and floor area.
+
+To further investigate this relationship, a conditional analysis was performed by dividing floor area into four equal categories and calculating the correlation between annual consumption and total income within each group. This analysis showed that, within each floor area group (i.e., conditional on floor area), the correlation between income and annual consumption is very weak. In conclusion, total income has an effect through the floor area. 
+
+
+```{r}
+cor(df_clean[,c("annual_kwh","income_euro","sq_meters")], use="complete.obs")
+#caual graph
+library(dagitty)
+G<- dagitty('dag {
+    Sq_Meter [pos="0,1"]
+    Annual_kwh [pos="2,1"]
+    Income [pos="1,0"]
+    
+    Sq_Meter -> Annual_kwh 
+    Sq_Meter <- Income -> Annual_kwh
+}')
+plot(G)
+summary(df_clean$sq_meters)
+sq_meters.quart<-quantile(df_clean$sq_meters[!is.na(df_clean$sq_meters)])
+Q1<-between(df_clean$sq_meters,sq_meters.quart[1],sq_meters.quart[2])
+cor(df_clean$income_euro[Q1],df_clean$annual_kwh[Q1],use="complete.obs")
+
+Q2<-between(df_clean$sq_meters,sq_meters.quart[2],sq_meters.quart[3])
+cor(df_clean$income_euro[Q2],df_clean$annual_kwh[Q2],use="complete.obs")
+
+Q3<-between(df_clean$sq_meters,sq_meters.quart[3],isq_meters.quart[4])
+cor(df_clean$income_euro[Q3],df_clean$annual_kwh[Q3],use="complete.obs")
+
+Q4<-between(df_clean$sq_meters,sq_meters.quart[4],sq_meters.quart[5])
+cor(df_clean$income_euro[Q4],df_clean$annual_kwh[Q4],use="complete.obs")
+
+##
+par(mfrow=c(2,2))
+plot(df_clean$income_euro[Q1],df_clean$annual_kwh[Q1])
+plot(df_clean$income_euro[Q2],df_clean$annual_kwh[Q2])
+plot(df_clean$income_euro[Q3],df_clean$annual_kwh[Q3])
+plot(df_clean$income_euro[Q4],df_clean$annual_kwh[Q4])
+
+#
+lm(log(annual_kwh) ~ income_euro, data = df_clean)%>%
+  summary()
+lm(log(annual_kwh) ~ income_euro+sq_meters, data = df_clean)%>%
+  summary()
+#
+ggplot(df_clean, aes(x = income_euro, y = log(annual_kwh))) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm") +
+  labs(
+    x = "Income (Euro)",
+    y = "Log Annual kWh",
+    title = "Relationship between Income and Energy Consumption"
+  ) +
+  theme_minimal()
+ggplot(df_clean, aes(x = sq_meters, y = log(annual_kwh))) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm") +
+  labs(
+    x = "Floor area",
+    y = "Log Annual kWh",
+    title = "Relationship between Floor area and Energy Consumption"
+  ) +
+  theme_minimal()
+###
+plot(df_clean$income_euro, df_clean$sq_meters,
+     xlab = "Income (Euro)",
+     ylab = "SQ-meters",
+     pch = )
+
+#####
+by(df_clean[, c("annual_kwh","occupancy_count")],
+   df_clean$epc_label,
+   function(x) cor(x[,1], x[,2], use = "complete.obs"))
+
+
+
+ggplot(df_clean,
+       aes(x = occupancy_count, y = annual_kwh)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~epc_label)+
+  labs(
+    title = "EPC B",
+    x = "Occupancy Count",
+    y = "Annual Energy Consumption (kWh)"
+  ) +
+  theme_minimal()
+
+```
+#The impact of a high-quality EPC rating (‘A’ or ‘B’) as household occupancy increases?
+A model with an interaction term between occupancy count and a dummy variable for high-quality EPC label A-B was fitted to investigate whether the effect of EPC label is dependent on the number of occupants. The correlation between annual electricity consumption and occupancy count was very similar in both EPC label groups. This was also confirmed by that the interaction term was not statistically significant with a p-value of 0.77. This confirm our basic findings, the effect of number of occupants on the annual consumption is 16% for each additional person keeping other predictors (floor area, EPC label, and construction era ) fixed. This signifies that there the effect of a proper insulation on electricity consumption does not change with the number of occupants.
 
 ```{r echo=FALSE, warning=F, message=F, include=FALSE}
 df_clean$epc_high <- ifelse(df_clean$epc_label %in% c('A','B'),1,0)
-
 model_q4<-lm(log(annual_kwh)~occupancy_count*epc_high+sq_meters+building_era,df_clean)
-
 q4.results <- summary(model_q4)
+
+##corelation per epc group
+by(df_clean[, c("annual_kwh","occupancy_count")],
+   df_clean$epc_high,
+   function(x) cor(x[,1], x[,2], use = "complete.obs"))
+ggplot(df_clean,
+       aes(x = occupancy_count, y = annual_kwh)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~epc_high)+
+  labs(
+    title = "EPC B",
+    x = "Occupancy Count",
+    y = "Annual Energy Consumption (kWh)"
+  ) +
+  theme_minimal()
 ```
 
 ```{r echo=FALSE, warning=F, message=F}
