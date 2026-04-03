@@ -1,35 +1,27 @@
 ---
 title: "Statistical Report sm"
-subtitle: "Determinants of Belgian Household Energy Consumption"
-
-author: |
-  GROUP 6:  
-  Morodoluwa Akin-Fajiye  
-  Samer Mheissen  
-  Blagovesta Hristoskova  
-  Jeffrey Nunoo  
-  Edoardo Pennesi  
-  Muthoni Wachira
-
+author: "GROUP 6:  \nMorodoluwa Akin-Fajiye  \nSamer Mheissen  \nBlagovesta Hristoskova
+  \ \nJeffrey Nunoo  \nEdoardo Pennesi  \nMuthoni Wachira\n"
 date: "`r Sys.Date()`"
-
 output:
   pdf_document:
     toc: true
     number_sections: true
+  word_document:
+    toc: true
+always_allow_html: true   # ← ADD THIS LINE
+subtitle: Determinants of Belgian Household Energy Consumption
 bibliography: references.bib
 csl: apa.csl
 fontsize: 11pt
 geometry: margin=1in
 header-includes:
-  - \usepackage{pdflscape}
-  - \usepackage{float}
-  - \usepackage{placeins}
-  - \usepackage{caption}
-  - \captionsetup[table]{width=\textwidth}
-  
+- \usepackage{pdflscape}
+- \usepackage{float}
+- \usepackage{placeins}
+- \usepackage{caption}
+- \captionsetup[table]{width=\textwidth}
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -345,11 +337,11 @@ To further investigate this relationship, a conditional analysis was performed b
 A model with an interaction term between occupancy count and a dummy variable for high-quality EPC label A-B was fitted to investigate whether the effect of EPC label is dependent on the number of occupants. The correlation between annual electricity consumption and occupancy count was very similar in both EPC label groups. This was also confirmed by that the interaction term was not statistically significant with a p-value of 0.77. This confirm our basic findings, the effect of number of occupants on the annual consumption is 16% for each additional person keeping other predictors fixed. This signifies that there the effect of a proper insulation on electricity consumption does not change with the number of occupants.(Table 21)
 
 
-# Conclusions
+# Conclusions and Ethical considerations
 
 The present analysis shows that the EPC label and the number of occupants are the most relevant predictors of annual electricity consumption. Compared to dwelling in energy class A, lower efficiency classes exhibit progressively higher electricity consumption, from about 7% for class B to nearly 37% for class F. Each additional occupant is responsible for a linear increase in electricity consumption of about 16%.
-The results should be interpreted with caution as the study considers only electricity consumption, while in the overall energy consumption also gas represents a relevant quota. Actually, most heating systems are still powered by gas. Form the data provided it is not possible to isolate the net effect of the predictors on electricity consumption.
-From the policy-maker perspective, data suggest that interventions aimed at reducing residential energy demand should prioritise improving building energy performance. It remains to be established whether encouraging the use of common areas (for example, co-working spaces in the building) will have a substantial impact on total energy demand. The heating and cooling system is a "shared" consumption in a household. This may reduce the contribution of the number of occupants in this model. Finally, it can included that the energy demand is primarily driven by individual behaviors.
+The results should be interpreted with caution as the study considers only electricity consumption in Belgium without a defined season. As such, other energy types, including gas and solar systems, are not considered and may change the estimate, and it is not possible to isolate the net effect of the predictors on electricity consumption. Also, socioeconomic status may affect energy consumption by using different and less effective home systems to overcome some financial obstacles. These statuses are not included in this model and should be taken into account while interpreting the results.
+From the policy-maker perspective, this study provides a model to predict the energy consumption and will not provide a decision to subsidize structural renovations or not, but may support behavioral interventions. It remains to be established whether encouraging the use of common areas (for example, co-working spaces in the building) will have a substantial impact on total energy demand. The heating and cooling system is a "shared" consumption in a household. This may reduce the contribution of the number of occupants in this model. Finally, it can be included that the energy demand is primarily driven by individual behaviors.
 
 \newpage
 
