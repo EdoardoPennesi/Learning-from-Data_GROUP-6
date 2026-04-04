@@ -61,7 +61,7 @@ This cross-sectional study collected data from 2500 households in Belgium and ex
 
 ## Data Cleaning
 
-Three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values ,which were 0.2% in six variables including the `annual_kwh` variable.(see appendix table 5).  After ordering the data in decreasing order, Five observations in the`annual_kwh` (rows number: 267, 1330, 1570, 369, 12) variable displayed too large values (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error (see section 6 for details).
+Three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values ,which were 0.2% in six variables including the `annual_kwh` variable.(see Appendix Table 5).  After ordering the data in decreasing order, Five observations in the `annual_kwh` (rows number: 267, 1330, 1570, 369, 12) variable displayed too large values (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error (see section 6 for details).
 
 ```{r, echo=FALSE, include=FALSE, warning=F, message=F}
 data.students <- read.table("data_students.txt",header=TRUE,sep=";")
@@ -80,7 +80,7 @@ df_clean <- df_clean %>%
 
 ## Data Coding
 
-Variables were coded according to their type: continuous, count, ordinal, categorical, or binary. Table 3 summarizes their descriptions and coding schemes.(appendix table 3)
+Variables were coded according to their type: continuous, count, ordinal, categorical, or binary. Table 3 summarizes their descriptions and coding schemes.(Appendix Table 3)
 
 ```{r echo=FALSE}
 data_dict <- data.frame(
@@ -140,21 +140,16 @@ The distribution of EPC labels was relatively balanced across categories. Labels
 On average, households consume 5,874.76 kWh of electricity annually, with a relatively large standard deviation (2,224.25 kWh). The median consumption (5,432.07 kWh) is slightly lower than the mean, suggesting a right-skewed distribution, which is also confirmed by the QQ plot showing upward deviations above the diagonal line in the upper tail (see appendix). Floor area averages 158.25(36.50) m² with a range from 60.26 m² to 341.30 m². Household income averages €48,842.90 (22,534.97) with a range from €8,487.91 to €206,367.91. As expected for this type of variable the QQ plot shows strong upper-tail deviation, suggesting positive skewness driven by high-income outliers. A breakdown for each variable is provided in section 6.3.
 
 The correlation matrix reveals that annual electricity consumption has a moderate positive correlation with floor area (r = 0.38) and with income (r = 0.29), suggesting that larger and wealthier households tend to consume more energy. Importantly, two predictors exhibit a strong positive correlation with each other, namely floor area and income (r = 0.72). Distance to Brussels shows virtually no correlation with the other variables, suggesting that location relative to Brussels does not strongly influence household energy use, dwelling size, or income in this dataset.
-Controlling for the income level, the EPC label distribution appears similar across income quantiles (figure 11) and
-comparable to the overall EPC distribution in the aggregate dataset. Indoor floor area does not
-associate with the size of the household since median floor area and interquartile ranges remain
-relatively stable when controlling for permanent residents, suggesting that larger households do
-not systematically live in larger dwellings in this dataset (figure 10). Distance to Brussels shows
-virtually no correlation with the other variables, suggesting that location relative to Brussels does not predict household energy use, dwelling size, or income in this dataset. (sections 6.5 and 6.6 of the appendix)
+Controlling for the income level, the EPC label distribution appears similar across income quantiles (figure 11) and comparable to the overall EPC distribution in the aggregate dataset. Indoor floor area does not associate with the size of the household since median floor area and interquartile ranges remain relatively stable when controlling for permanent residents, suggesting that larger households do not systematically live in larger dwellings in this dataset (figure 10). (see sections 6.5 and 6.6 of the Appendix)
 
 # Inferential Statistics
 
 ## Regression model selectoin
 The initial model contained all variables plus interaction terms between income and number of occupants, EPC label and floor area, EPC label and number of occupants, and income and EPC label. Interactions were selected based on literaturen and the protocol research questions. A quadratic term was considered for `occupancy_count` consistently with a possible decreasing marginal effect of additional occupants. We will refer to the initial model as *saturated*.
-Predictor retention was determined using a backward elimination stepwise procedure by fitting the full model then removing the least significant predictors that did not meaningfully contribute to the model fit based on the Bayesian Information Criterion (BIC) and p value, which favours more parsimonious models. At each step, the variable whose removal produced the greatest reduction in BIC was eliminated, and the process continued until no further decrease was observed. we called it *first model* 
+Predictor retention was determined using a backward elimination stepwise procedure by fitting the full model then removing the least significant predictors that did not meaningfully contribute to the model fit based on the Bayesian Information Criterion (BIC) and p value, which favours more parsimonious models. At each step, the variable whose removal produced the greatest reduction in BIC was eliminated, and the process continued until no further decrease was observed. We called it *first model*.
 After fitting the *first model* the diagnostic plots were checked and showed some violations of the standard assumptions. The residuals vs fitted plot indicates the presence of heteroskedasticity, with the variance of the residuals increasing for higher fitted values, and mild deviations from normality in the Q-Q plot. 
 In this regards, the outcome variable `annual_kwh` was log transformed resulting in an improvement of the diagnostic plots, particularly by yielding a more symmetric residual distribution and enhancing homoskedasticity (fig. 1).
-The final model retained floor area, EPC label, and the number of occupants as predictors of annual electricity consumption. The interaction terms and other covariates were removed. Nevertheless, `building_era` was retained in the model as it acts as a confounded being related to both `annual_kwh` and `epc_label`as A and B were basically absent before year 2000(Table 1).(see section 6.7 for details).
+The final model retained floor area, EPC label, and the number of occupants as predictors of annual electricity consumption. The interaction terms and other covariates were removed. Nevertheless, `building_era` was retained in the model as it acts as a confounded being related to both `annual_kwh` and `epc_label`as A and B were basically absent before year 2000 (Table 1 and 2).(see section 6.7 for details).
 
 ```{r echo=FALSE, warning=F, message=F, include=FALSE}
 
@@ -281,8 +276,9 @@ model_comp <- data.frame(
 kable(model_comp, digits = 3, caption = "Model comparison (initial,log-model, and final) using AIC, BIC, and Adj-R-squared")
 ```
 ### Interpretation
-The results indicate that household size is a strong predictor of electricity consumption, with each additional square meter associated with an approximate 0.4% increase in the annual consumption within the same EPC-label and same number of occupants. Compared to EPC class A, lower efficiency classes exhibit progressively higher electricity consumption, from about 9% for class B to nearly 37% for class F, keeping other predictors fixed. Each additional occupant is responsible for around 16% increase in energy consumption, and this is also supported by larger sum of squares (220.87).(appendix tabl 16)
-It seems that annual electricity consumption is more behavior-dependent rather than driven by house size.for each extra bedroom with size of 15 m², the power consumption will increase by 6%. However, keeping the other predictors fixed, for each additional household occupant, consumption increases by about 16%.Since there is no evidence that larger households tend to live in larger dwellings, a plausible explanation for the observed linear relationship between energy consumption and the number of occupants is that energy demand is primarily driven by individual behaviors.
+The model indicates that, compared to EPC class A, lower efficiency classes exhibit progressively higher electricity consumption. Houses with a ‘B’ rating use approximately 9 % more energy than houses with the reference label (A), while ‘C’, ‘D’, ‘E’ and ‘F’ use about 16%, 27%, 37% and 48%, respectively, keeping other predictors fixed. This was statistically significant even after correction for multiple testing. (Appendix Table 17).
+The results indicate that household size is a strong predictor of electricity consumption, with each additional square meter associated with an approximate 0.4% increase in the annual consumption within the same EPC-label and same number of occupants. Each additional occupant is responsible for around 16% increase in energy consumption fro same EPC class and house size, and this is also supported by larger sum of squares (220.87).(Appendix Table 16)
+It seems that annual electricity consumption is more behavior-dependent rather than driven by house size. For each extra bedroom with size of 15 m², the power consumption increases by 6%. However, each additional household occupant increases electricity consumption by 16%. Since there is no evidence that larger households tend to live in larger dwellings, a plausible explanation for the observed linear relationship between energy consumption and the number of occupants is that energy demand is primarily driven by individual behaviors.
 
 ```{r echo=FALSE, warning=F, message=F}
 
@@ -322,25 +318,25 @@ kable(coef_table,
       caption = "Regression results for the final model")
 ```
 
-## Contrast analysis
-
-Comparison using Dunnett contrast to compare each label B-F to A, with Benjamini-Hochberg correction for multiple testing, shows that annual energy use is significantly higher in the lower EPC ratings, compared to the reference category. Houses with a 'B' rating use approximately 9 % more energy than homes with the reference label, while 'C', 'D', 'E' and 'F' use about 16%, 27%, 37% and 48%, respectively. (Table 17)
 
 ## The income effect
 
-The total annual household income was removed from the model due to not adding any improvement in the model.The income variable kept the adjusted R2 as in the main model, but increased the BIC value by 7 units; suggesting less supported model. (Appendix Table 19)
-Income appears to be a meaningful predictor of annual power consumption based on real-life considerations and prior knowledge (i.e., higher income is associated with more devices and higher power use). This was significant in the model before adjusting for the floor area. However, after including dwelling size in the model the effect of income attenuated and became non-significant. This could be due to that both covariates are sharing similar information. There is a positive correlation between annual power consumption and total income, as well as between annual power consumption and floor area.This suggests that dwelling size may act as a mediator in the relationship between income and energy consumption, capturing much of the variability that would otherwise be attributed to income.
+The total annual household income was removed from the model due to not adding any improvement in the model. The income variable kept the adjusted R2 as in the main model, but increased the BIC value by 7 units; suggesting less supported model. (Appendix Table 19)
+Income appears to be a meaningful predictor of annual power consumption based on real-life considerations and prior knowledge (i.e., higher income is associated with more devices and higher power use). This was significant in the model before adjusting for the floor area. However, after including dwelling size in the model the effect of income attenuated and became non-significant. This could be due to that both covariates are sharing similar information. There is a positive correlation between annual power consumption and total income, as well as between annual power consumption and floor area. This suggests that dwelling size may act as a mediator in the relationship between income and energy consumption, capturing much of the variability that would otherwise be attributed to income.
 To further investigate this relationship, a conditional analysis was performed by dividing floor area into four equal categories and calculating the correlation between annual consumption and total income within each group. This analysis showed that, within each floor area group (i.e., conditional on floor area), the correlation between income and annual consumption is very weak. In conclusion, total income has an effect through the floor area. (Figure 12, and 13)
 
 ## The impact of a high-quality EPC rating (‘A’ or ‘B’) as household occupancy increases.
 
-A model with an interaction term between occupancy count and a dummy variable for high-quality EPC label A-B was fitted to investigate whether the effect of EPC label is dependent on the number of occupants. The correlation between annual electricity consumption and occupancy count was very similar in both EPC label groups. This was also confirmed by that the interaction term was not statistically significant with a p-value of 0.77. This confirm our basic findings, the effect of number of occupants on the annual consumption is 16% for each additional person keeping other predictors fixed. This signifies that there the effect of a proper insulation on electricity consumption does not change with the number of occupants.(Table 21)
+A model with an interaction term between occupancy count and a dummy variable for high-quality EPC label A-B was fitted to investigate whether the effect of EPC label is dependent on the number of occupants. The correlation between annual electricity consumption and occupancy count was very similar in both EPC label groups. This was also confirmed by that the interaction term was not statistically significant with a p-value of 0.77. This confirm our basic findings, the effect of number of occupants on the annual consumption is 16% for each additional person keeping other predictors fixed. This signifies that the effect of a proper insulation on electricity consumption does not change with the number of occupants.(Table 21)
 
 
 # Conclusions and Ethical considerations
 
-The present analysis shows that the EPC label and the number of occupants are the most relevant predictors of annual electricity consumption. Compared to dwelling in energy class A, lower efficiency classes exhibit progressively higher electricity consumption, from about 7% for class B to nearly 37% for class F. Each additional occupant is responsible for a linear increase in electricity consumption of about 16%.
-The results should be interpreted with caution as the study considers only electricity consumption in Belgium without a defined season. As such, other energy types, including gas and solar systems, are not considered and may change the estimate, and it is not possible to isolate the net effect of the predictors on electricity consumption. Also, socioeconomic status may affect energy consumption by using different and less effective home systems to overcome some financial obstacles. These statuses are not included in this model and should be taken into account while interpreting the results.
+The present analysis shows that the EPC label and the number of occupants are the most relevant predictors of annual electricity consumption. Compared to dwelling in energy class A, lower efficiency classes exhibit progressively higher electricity consumption, from about 7% for class B to nearly 48% for class F. Each additional occupant is responsible for a linear increase in electricity consumption of about 16%.
+
+We should keep in mind the model explains 88% of the variance in the dependent variable, adjusted for the number of predictors.
+The results should be interpreted with caution as the study considers energy consumption in Belgium with no enough information about the date/settings of data collection. The variation in using energy systems between houses was not considered in this analysis, as some people prefer gas and electricity, while others are dependent on electricity only. Furthermore, solar system use may be unmeasured confounder.
+Socioeconomic status may affect energy consumption by using different and less effective home systems to overcome some financial obstacles. These statuses are not included in this model and should be taken into account while interpreting the results.
 From the policy-maker perspective, this study provides a model to predict the energy consumption and will not provide a decision to subsidize structural renovations or not, but may support behavioral interventions. It remains to be established whether encouraging the use of common areas (for example, co-working spaces in the building) will have a substantial impact on total energy demand. The heating and cooling system is a "shared" consumption in a household. This may reduce the contribution of the number of occupants in this model. Finally, it can be included that the energy demand is primarily driven by individual behaviors.
 
 \newpage
@@ -356,7 +352,11 @@ kable(data_dict, caption = "Data Dictionary") %>%
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-kable(head(data.students[order(-data.students$annual_kwh), ], 10))%>% kable_styling()
+kable(head(data.students[order(-data.students$annual_kwh), ], 10), caption = "Data Orderd") %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  column_spec(2, width = "3cm") %>%  
+  column_spec(3, width = "3cm")
+
 ```
 ## Summary tables for missing values
 
@@ -735,7 +735,7 @@ tab_mean <- tapply(df_clean$annual_kwh,
                    mean,
                    na.rm = TRUE)
 kable(tab_mean,
-      caption = "Mean Annual Energy Consumption by Size and Income Quintiles",
+      caption = "Mean Annual Energy Consumption by Size and Income Quartiles",
       digits = 0,
       row.names = TRUE) %>%
   kableExtra::add_header_above(c(" " = 1, "Income Quintiles" = ncol(tab_mean)))
