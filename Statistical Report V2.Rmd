@@ -284,6 +284,7 @@ It seems that annual electricity consumption is more behavior-dependent rather t
 
 # CREATE A SUMMARY TABLE WITH REG RESULTS
 coef_table <- summary(final_model)$coefficients
+
 ci <- confint(final_model)
 
 
@@ -307,6 +308,12 @@ coef_table <- cbind(
 colnames(coef_table) <- c(
   "Beta", "Std. Error", "p-value",
   "OR", "CI 2.5%", "CI 97.5%"
+)
+
+coef_table[, "p-value"] <- ifelse(
+  coef_table[, "p-value"] < 0.001,
+  "<0.001",
+  sprintf("%.3f", coef_table[, "p-value"])
 )
 
 # Rename long row names
@@ -899,6 +906,11 @@ $$
 
 coef_table <- summary(model.log)$coefficients
 colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value")
+coef_table[, "p-value"] <- ifelse(
+  coef_table[, "p-value"] < 0.001,
+  "<0.001",
+  sprintf("%.3f", coef_table[, "p-value"])
+)
 
 kable(coef_table,
       digits = 5,
@@ -913,8 +925,15 @@ ci <- confint(final_model)
 # Combine results
 coef_table <- cbind(coef_table, ci)
 
+
 # Rename columns
 colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value", "CI 2.5%", "CI 97.5%")
+
+coef_table[, "p-value"] <- ifelse(
+  coef_table[, "p-value"] < 0.001,
+  "<0.001",
+  sprintf("%.3f", coef_table[, "p-value"])
+)
 
 kable(coef_table,
       digits = 5,
@@ -1006,6 +1025,12 @@ kable (BIC(modelincom, final_model), caption = "Model godness after inclusing in
 incom<- summary(modelincom)$coefficients
 colnames(incom) <- c("Estimate", "Std. Error", "t value", "p-value")
 
+incom[, "p-value"] <- ifelse(
+  incom[, "p-value"] < 0.001,
+  "<0.001",
+  sprintf("%.3f", incom[, "p-value"])
+)
+
 kable(incom,
       digits = 5,
       caption = "Regression model incluing regressor of income")
@@ -1018,6 +1043,11 @@ q4.results <- summary(model_q4)
 coef_table <- as.data.frame(q4.results$coefficients)
 
 colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value")
+coef_table[, "p-value"] <- ifelse(
+  coef_table[, "p-value"] < 0.001,
+  "<0.001",
+  sprintf("%.3f", coef_table[, "p-value"])
+)
 
 kable(coef_table,
       digits = 4,
@@ -1025,5 +1055,502 @@ kable(coef_table,
 ```
 
 \newpage
+# R code
+```{r, eval=FALSE}
+# creating the dataset
+data.students <- read.table("data_students.txt",header=TRUE,sep=";")
+df_clean <- data.students[-c(66, 36, 135), ] # removing obs per protocol
+df_clean <- df_clean %>%
+     filter(if_all(everything(), ~ !is.na(.))) # missing vals removed
+head(df_clean[order(-df_clean$annual_kwh), ], 10)
+df_clean <- df_clean %>%
+    filter(annual_kwh <= 18000) # outliers in kWh removed
+
+# Coding the variables
+df_clean$epc_label <- factor(df_clean$epc_label)
+df_clean$building_era <- factor(df_clean$building_era)
+df_clean$roof_color <- factor(df_clean$roof_color)
+df_clean$pet_ownership <- factor(df_clean$pet_ownership)
+
+# Setting the reference levels
+df_clean$building_era <- relevel(df_clean$building_era, ref = "Pre-1970")
+df_clean$epc_label <- relevel(df_clean$epc_label, ref = "A")
+df_clean$roof_color <- relevel(df_clean$roof_color, ref = "Red")
+df_clean$pet_ownership <- relevel(df_clean$pet_ownership, ref = "0")
+
+# testing the initial saturated model with all vars and interactions
+full_model <- lm(
+  annual_kwh ~ sq_meters +
+    epc_label +
+    building_era +
+    income_euro +
+    occupancy_count +
+    I(occupancy_count^2) +
+    dist_to_brussels +
+    roof_color +
+    pet_ownership +
+    income_euro:occupancy_count +
+    income_euro:sq_meters+
+    income_euro:epc_label+
+    epc_label:sq_meters +
+    epc_label:occupancy_count,
+  data = df_clean
+)
+
+
+n <- nrow(df_clean)
+
+final_model <- step(
+  full_model,
+  direction = "backward",
+  k = log(n) # BIC criterion used
+)
+
+
+# visualise summary results (not displayed in the pdf)
+summary(final_model, test=adjusted("BH"))
+BIC(final_model)
+
+# testing the initial saturated model with all vars and interactions but log_kWh
+full_model.log <- lm(
+  log(annual_kwh) ~ sq_meters +
+    epc_label +
+    building_era +
+    income_euro +
+    occupancy_count +
+    I(occupancy_count^2) +
+    dist_to_brussels +
+    roof_color +
+    pet_ownership +
+    income_euro:occupancy_count +
+    income_euro:sq_meters+
+    income_euro:epc_label+
+    epc_label:sq_meters +
+    epc_label:occupancy_count,
+  data = df_clean
+)
+
+n <- nrow(df_clean)
+
+final_model.log <- step(
+  full_model.log,
+  direction = "backward",
+  k = log(n)
+)
+
+# visualise summary results (not displayed in the pdf)
+summary(final_model.log, test=adjusted("BH"))
+BIC(final_model.log)
+
+# Forcing building era into the model as a confounder
+
+final_model.log_buil.era <- lm(
+  log(annual_kwh) ~ sq_meters +
+    epc_label +
+    building_era+
+    occupancy_count,
+  data = df_clean
+)
+
+# visualise summary results (not displayed in the pdf)
+summary(final_model.log_buil.era, test=adjusted("BH"))
+BIC(final_model.log_buil.era)
+
+# CREATE A SUMMARY TABLE WITH REG RESULTS
+
+# extract coefficients
+coef_table <- summary(final_model.log_buil.era)$coefficients
+ci <- confint(final_model.log_buil.era)
+
+# Combine results
+coef_table <- cbind(coef_table, ci)
+
+# Convert to percentage effect on kWh
+perc_effect <- (exp(coef_table[, "Estimate"]) - 1) * 100
+
+# Transform CI
+perc_ci_low  <- (exp(coef_table[, "2.5 %"]) - 1) * 100
+perc_ci_high <- (exp(coef_table[, "97.5 %"]) - 1) * 100
+
+# Keep selected columns (dropped beta CI and t statistics)
+coef_table <- cbind(
+  coef_table[, c("Estimate", "Std. Error", "Pr(>|t|)")],
+  perc_effect, perc_ci_low, perc_ci_high
+)
+
+# Rename columns
+colnames(coef_table) <- c(
+  "Beta", "Std. Error", "p-value",
+  "% Effect", "CI 2.5%", "CI 97.5%"
+)
+
+# Rename long row names
+rownames(coef_table)[rownames(coef_table) == 
+                       "building_era1970-2000"] <- "Built 1970–2000"
+rownames(coef_table)[rownames(coef_table) 
+                     == "building_eraPost-2000"] <- "Built post-2000"
+
+kable(coef_table,
+      digits = 3,
+      caption = "Regression results for the final model (p-values are adjusted 
+      using the Benjamini-Hochberg procedure)")
+
+# show diagnostic plots for the final model
+par(mfrow = c(2,2))
+plot(final_model.log_buil.era)
+par(mfrow = c(1,1))
+
+# Create summary tables for categorical variables
+cat_summary <- df_clean %>%
+  select(where(is.factor)) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  group_by(variable, value) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(variable) %>%
+  mutate(p = round(100 * n / sum(n), 1))
+
+knitr::kable(cat_summary, caption = "Categorical variables (n, %)")
+
+# Create summary tables for continuous variables
+summary_table <- df_clean %>%
+  summarise(
+    across(
+      c(annual_kwh, sq_meters, dist_to_brussels, income_euro),
+      list(
+        Mean = ~mean(.x, na.rm = TRUE),
+        SD = ~sd(.x, na.rm = TRUE),
+        Median = ~median(.x, na.rm = TRUE),
+        IQR = ~IQR(.x, na.rm = TRUE),
+        Min = ~min(.x, na.rm = TRUE),
+        Max = ~max(.x, na.rm = TRUE)
+      )
+    )
+  ) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = c("Variable", "Statistic"),
+    names_pattern = "(.+)_(Mean|SD|Median|IQR|Min|Max)$"
+  ) %>%
+  pivot_wider(names_from = Variable, values_from = value)
+
+kable(summary_table,
+      digits = 2,
+      caption = "Summary Statistics for Continuous Variables")
+
+missing_table <- data.students %>%
+  summarise(across(everything(),
+    ~ sum(is.na(.))
+  )) %>%
+  pivot_longer(everything(),
+               names_to = "Variable",
+               values_to = "Missing_n") %>%
+  mutate(
+    Missing_pct = round(100 * Missing_n / nrow(df_clean), 2)
+  ) %>%
+  arrange(desc(Missing_pct))
+
+knitr::kable(missing_table, caption = "Missing data summary")
+
+# Box plots
+
+layout(matrix(1:4, 2, 2))
+
+boxplot(df_clean$annual_kwh,
+        main = "Annual Energy Consumption",
+        ylab = "annual_kwh")
+
+boxplot(df_clean$sq_meters,
+        main = "Floor Area",
+        ylab = "sq_meters")
+
+boxplot(df_clean$dist_to_brussels,
+        main = "Distance to Brussels",  
+        ylab = "dist_to_brussels")
+
+boxplot(df_clean$income_euro,
+        main = "Income",
+        ylab = "income_euro")
+
+# QQ Plots
+
+layout(matrix(1:4, 2, 2))
+
+
+qqnorm(df_clean$annual_kwh,
+       main = "QQ Plot: Annual Energy Consumption")
+qqline(df_clean$annual_kwh)
+
+qqnorm(df_clean$sq_meters,
+       main = "QQ Plot: Floor Area")
+qqline(df_clean$sq_meters)
+
+qqnorm(df_clean$dist_to_brussels,
+       main = "QQ Plot: Distance to Brussels")
+qqline(df_clean$dist_to_brussels)
+
+qqnorm(df_clean$income_euro,
+       main = "QQ Plot: Income")
+qqline(df_clean$income_euro)
+
+# QQ Plots for log_kWh
+
+layout(matrix(1:4, 2, 2))
+
+qqnorm(log(df_clean$annual_kwh),
+       main = "QQ Plot: Log Annual Energy Consumption")
+qqline(log(df_clean$annual_kwh))
+
+qqnorm(log(df_clean$sq_meters),
+       main = "QQ Plot: Log Floor Area")
+qqline(log(df_clean$sq_meters))
+
+qqnorm(log(df_clean$dist_to_brussels),
+       main = "QQ Plot: Log Distance to Brussels")
+qqline(log(df_clean$dist_to_brussels))
+
+qqnorm(log(df_clean$income_euro),
+       main = "QQ Plot: Log Income")
+qqline(log(df_clean$income_euro))
+
+
+# Box plot eergy consumption vs cat variables
+
+par(mfrow = c(2,1))
+
+boxplot(annual_kwh ~ epc_label,
+        data = df_clean,
+        main = "Annual Energy Consumption by EPC Label",
+        ylab = "annual_kwh",
+        xlab = "epc_label")
+
+boxplot(annual_kwh ~ occupancy_count,
+        data = df_clean,
+        main = "Annual Energy Consumption by Occupancy Counts",
+        ylab = "annual_kwh",
+        xlab = "Occupancy Counts")
+
+par(mfrow = c(2,1))
+
+boxplot(annual_kwh ~ building_era,
+        data = df_clean,
+        main = "Annual Energy Consumption by Building Era",
+        ylab = "annual_kwh",
+        xlab = "building_era")
+
+
+boxplot(annual_kwh ~ pet_ownership,
+        data = df_clean,
+        main = "Annual Energy Consumption by Pet Ownership",
+        ylab = "annual_kwh",
+        xlab = "Pet_Ownership")
+
+par(mfrow = c(1,1))
+
+boxplot(annual_kwh ~ roof_color,
+        data = df_clean,
+        main = "Annual Energy Consumption by Roof Color",
+        ylab = "annual_kwh",
+        xlab = "Roof Color")
+
+
+# Bar plot of categorical vars against each-other
+
+par(mfrow = c(2,1))
+
+df_clean$building_era <- as.factor(df_clean$building_era)
+df_clean$epc_label <- as.factor(df_clean$epc_label)
+df_clean$occupancy_count <- as.factor(df_clean$occupancy_count)
+
+cols2 <- gray.colors(length(levels(df_clean$epc_label)))
+
+barplot(table(df_clean$epc_label, df_clean$building_era),
+        beside = TRUE,
+        main = "ECP label by Building Era",
+        ylab = "count",
+        xlab = "Building Era")
+
+legend("topright",
+       inset = c(-0.05, 0),   # move right
+       legend = levels(df_clean$epc_label),
+       fill = cols2,
+       cex = 0.8,
+       bty = "n",
+       xpd = TRUE)   
+
+cols3 <- gray.colors(length(levels(df_clean$building_era)))
+
+barplot(table(df_clean$occupancy_count, df_clean$building_era),
+        beside = TRUE,
+        col = cols3,
+        main = "Occupancy Count Distribution by Building Era",
+        ylab = "Count",
+        xlab = "Building Era")
+
+legend("topright",
+       inset = c(-0.05, 0),   # move right
+       legend = levels(df_clean$occupancy_count),
+       fill = cols3,
+       cex = 0.8,
+       bty = "n",
+       xpd = TRUE)   
+
+
+par(mfrow = c(1,1))
+
+
+# Divide income by quantile
+df_clean$income_q <- cut(
+  df_clean$income,
+  breaks = quantile(df_clean$income, probs = seq(0, 1, 0.2), na.rm = TRUE),
+  include.lowest = TRUE,
+  labels = c("Q1", "Q2", "Q3", "Q4", "Q5")
+)
+
+# Table EPC labels distribution by income quintile
+tab <- table(df_clean$income_q, df_clean$epc_label)
+cols <- gray.colors(length(levels(df_clean$epc_label)))
+
+
+bp <- barplot(t(tab),
+              beside = TRUE,
+              col = cols,
+              main = "EPC Label Distribution by Income",
+              ylab = "Count",
+              xlab = "Income Quintile",
+              names.arg = levels(df_clean$income_q))
+        
+legend("topright",
+       inset = c(-0.1, 0),   # move right
+       legend = levels(df_clean$epc_label),
+       fill = cols,
+       cex = 0.8,
+       bty = "n",
+       xpd = TRUE)    
+
+# Divide sq_meters by quantile
+df_clean$sq_meters_q <- cut(
+  df_clean$sq_meters,
+  breaks = quantile(df_clean$sq_meters, probs = seq(0, 1, 0.2), na.rm = TRUE),
+  include.lowest = TRUE,
+  labels = c("Q1", "Q2", "Q3", "Q4", "Q5")
+)
+
+
+# Visualize sq_meters by occupancy_count
+df_clean$occupancy_count <- as.factor(unlist(df_clean$occupancy_count))
+boxplot(sq_meters ~ occupancy_count,
+        data = df_clean,
+        main = "Dwelling Size by Occupants",
+        xlab = "Occupancy count",
+        ylab = "Square meters")
+
+# Table mean Annual Energy Consumption by Size and Income Quintiles
+tab_mean <- tapply(df_clean$annual_kwh,
+                   list(Size = df_clean$sq_meters_q,
+                        Income = df_clean$income_q),
+                   mean,
+                   na.rm = TRUE)
+kable(tab_mean,
+      caption = "Mean Annual Energy Consumption by Size and Income Quintiles",
+      digits = 0,
+      row.names = TRUE) %>%
+  kableExtra::add_header_above(c(" " = 1, "Income Quintiles" = ncol(tab_mean)))
+
+
+
+# Correlation plots of each continuous variable with eachother
+
+par(mfrow = c(1,1))  # reset plotting layout
+
+vars <- df_clean[, c("annual_kwh", "sq_meters", "dist_to_brussels", 
+                     "income_euro")]
+cor_matrix <- cor(vars, use = "complete.obs")
+corrplot(cor_matrix,
+         method = "circle",
+         type = "upper",
+         addCoef.col = "black",
+         tl.col = "black",
+         tl.srt = 45)
+
+
+# Create DAG for the causal relationship among predictors and aoutcome
+
+# DAG 1: Confounder
+dag_confounder <- dagitty("
+dag {
+  building_era -> epc_label
+  building_era -> annual_kwh
+  epc_label -> annual_kwh
+}
+")
+
+p1 <- ggdag(dag_confounder, text = TRUE, use_labels = "name") +
+  theme_dag() +
+  ggtitle("Building Era as a Confounder")
+
+# DAG 2: Mediator
+dag_mediator <- dagitty("
+dag {
+  income -> sq_meters
+  sq_meters -> annual_kwh
+}
+")
+
+p2 <- ggdag(dag_mediator, text = TRUE, use_labels = "name") +
+  theme_dag() +
+  ggtitle("Square_meters as a Mediator")
+
+# Combine plots
+p1 + p2
+
+# Display reg results for the saturated model
+
+coef_table <- summary(full_model.log)$coefficients
+colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value")
+
+kable(coef_table,
+      digits = 5,
+      caption = "Regression results for the saturated model using l
+      og-transformed outcome (p-values are adjusted using the 
+      Benjamini-Hochberg procedure).",
+      booktabs = TRUE,
+      escape = TRUE)
+
+
+# Compare BIC, AIC and R2 for each model tested
+
+models <- list(
+  initial_model = full_model,
+  initial_model.log = full_model.log,
+  final_model = final_model.log_buil.era
+)
+
+data.frame(
+  Model = names(models),
+  AIC = sapply(models, AIC),
+  BIC = sapply(models, BIC),
+  R2 = sapply(models, function(m) summary(m)$r.squared)
+)
+
+model_comp <- data.frame(
+  Model = names(models),
+  AIC = sapply(models, AIC),
+  BIC = sapply(models, BIC),
+  R2 = sapply(models, function(m) summary(m)$r.squared)
+)
+
+kable(model_comp, digits = 3, caption = "Model comparison (initial vs. final) 
+      using AIC, BIC, and R-squared")
+
+# Diagnostic plots for each model
+par(mfrow = c(2,2))
+plot(full_model)
+plot(full_model.log)
+plot(final_model.log_buil.era)
+par(mfrow = c(1,1))
+```
 
 # References
+
+Kutner, M. H., Nachtsheim, C. J., Neter, J., & Li, W. (2005). *Applied Linear Statistical Models* (5th ed.). McGraw-Hill/Irwin.
+Olivier Thas (2023-2024) *Linear Models*
