@@ -363,12 +363,11 @@ kable(data_dict, caption = "Data Dictionary") %>%
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-kable(head(data.students[order(-data.students$annual_kwh), ], 10),
-      caption = "Data Ordered",
-      format = "latex",
-      booktabs = TRUE) %>%
-  kable_styling(latex_options = "scale_down", position = "center")
-
+kable(
+  head(data.students[order(-data.students$annual_kwh), ], 10)[, -((ncol(data.students)-2):ncol(data.students))],
+  caption = "Data Ordered"
+) %>%
+  kable_styling(full_width = FALSE, position = "center")
 ```
 ## Summary tables for missing values
 
