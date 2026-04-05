@@ -1553,4 +1553,4 @@ par(mfrow = c(1,1))
 # References
 
 Kutner, M. H., Nachtsheim, C. J., Neter, J., & Li, W. (2005). *Applied Linear Statistical Models* (5th ed.). McGraw-Hill/Irwin.
-Thas Olivier (2023-2024) *Linear Models*
+Thas, O. (2024). *Linear Models* (course notes). Hasselt University.
