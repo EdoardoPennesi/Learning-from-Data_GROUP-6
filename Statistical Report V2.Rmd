@@ -1,5 +1,5 @@
 ---
-title: "Statistical Report sm"
+title: "Statistical Report "
 author: "GROUP 6:  \nMorodoluwa Akin-Fajiye  \nSamer Mheissen  \nBlagovesta Hristoskova
   \ \nJeffrey Nunoo  \nEdoardo Pennesi  \nMuthoni Wachira\n"
 date: "`r Sys.Date()`"
@@ -61,7 +61,7 @@ This cross-sectional study collected data from 2500 households in Belgium and ex
 
 ## Data Cleaning
 
-Three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values ,which were 0.2% in six variables including the `annual_kwh` variable.(see Appendix Table 5).  After ordering the data in decreasing order, Five observations in the `annual_kwh` (rows number: 267, 1330, 1570, 369, 12) variable displayed too large values (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error (see section 6 for details).
+Three observations (rows 66, 36, and 135) were removed from the dataset according to the instructions. Subsequently, the dataset was cleaned by excluding observations with missing values ,which were 0.2% in six variables including the `annual_kwh` variable.(see Appendix Table 5).  After ordering the data in decreasing order, Five observations in the `annual_kwh` variable (rows number: 267, 1330, 1570, 369, 12) displayed too large values (172 to 312 times larger) and, therefore, were removed as were attributed to imputation error (see section 6 for details).
 
 ```{r, echo=FALSE, include=FALSE, warning=F, message=F}
 data.students <- read.table("data_students.txt",header=TRUE,sep=";")
@@ -80,7 +80,7 @@ df_clean <- df_clean %>%
 
 ## Data Coding
 
-Variables were coded according to their type: continuous, count, ordinal, categorical, or binary. Table 3 summarizes their descriptions and coding schemes.(Appendix Table 3)
+Variables were coded according to their type: continuous, count, ordinal, categorical, or binary. Table 3 summarizes their descriptions and coding schemes.(Appendix )
 
 ```{r echo=FALSE}
 data_dict <- data.frame(
@@ -133,7 +133,7 @@ df_clean$pet_ownership <- relevel(df_clean$pet_ownership, ref = "0")
 
 ## Categorical variables
 
-The distribution of EPC labels was relatively balanced across categories. Labels A (22.2%) and C (21.3%) are the most common, followed by B (17.6%) and D (15.7%). Lower-efficiency categories E occur less frequently, 13.6% and F 9.6%, respectively. Buildings construction periods and occupancy count were evenly distributed in the sample, with approximately 33% in each building era and 14-15% in each occupancy count. A breakdown is provided in the appendix. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts. From the exploratory analysis, two categorical variables seem to correlate strongly with electricity consumption: EPC label and occupancy count. The other categorical variables did not display an apparent correlation with electricity consumption. Moreover, EPC label and building era are correlated with each other since the most efficient labels are clustered in the two most recent building eras. (see section 6.2).
+The distribution of EPC labels was relatively balanced across categories. Labels A (22.2%) and C (21.3%) are the most common, followed by B (17.6%) and D (15.7%). Lower-efficiency categories E and F occur less frequently, 13.6% and 9.6%, respectively. Buildings construction periods and occupancy count were evenly distributed in the sample, with approximately 33% in each building era and 14-15% in each occupancy count. A breakdown is provided in the appendix. None of the categories appear too sparse, suggesting that all variables can be retained for modelling without concerns about low cell counts. From the exploratory analysis, two categorical variables seem to correlate strongly with electricity consumption: EPC label and occupancy count. The other categorical variables did not display an apparent correlation with electricity consumption. Moreover, EPC label and building era are correlated with each other since the most efficient labels are clustered in the two most recent building eras. (see section 6.2).
 
 ## Continuous variables
 
@@ -145,8 +145,8 @@ Controlling for the income level, the EPC label distribution appears similar acr
 # Inferential Statistics
 
 ## Regression model selectoin
-The initial model contained all variables plus interaction terms between income and number of occupants, EPC label and floor area, EPC label and number of occupants, and income and EPC label. Interactions were selected based on literaturen and the protocol research questions. A quadratic term was considered for `occupancy_count` consistently with a possible decreasing marginal effect of additional occupants. We will refer to the initial model as *saturated*.
-Predictor retention was determined using a backward elimination stepwise procedure by fitting the full model then removing the least significant predictors that did not meaningfully contribute to the model fit based on the Bayesian Information Criterion (BIC) and p value, which favours more parsimonious models. At each step, the variable whose removal produced the greatest reduction in BIC was eliminated, and the process continued until no further decrease was observed. We called it *first model*.
+The initial model contained all variables plus interaction terms between income and number of occupants, EPC label and floor area, EPC label and number of occupants, and income and EPC label. Interactions were selected based on literaturen and the protocol research questions. A quadratic term was considered for `occupancy_count` consistently with a possible decreasing marginal effect of additional occupants. We will refer to the initial model as *saturated*.\
+Predictor retention was determined using a backward elimination stepwise procedure by fitting the full model then removing the least significant predictors that did not meaningfully contribute to the model fit based on the Bayesian Information Criterion (BIC) and p value, which favours more parsimonious models. At each step, the variable whose removal produced the greatest reduction in BIC was eliminated, and the process continued until no further decrease was observed. We called it *first model*.\
 After fitting the *first model* the diagnostic plots were checked and showed some violations of the standard assumptions. The residuals vs fitted plot indicates the presence of heteroskedasticity, with the variance of the residuals increasing for higher fitted values, and mild deviations from normality in the Q-Q plot. 
 In this regards, the outcome variable `annual_kwh` was log transformed resulting in an improvement of the diagnostic plots, particularly by yielding a more symmetric residual distribution and enhancing homoskedasticity (fig. 1).
 The final model retained floor area, EPC label, and the number of occupants as predictors of annual electricity consumption. The interaction terms and other covariates were removed. Nevertheless, `building_era` was retained in the model as it acts as a confounded being related to both `annual_kwh` and `epc_label`as A and B were basically absent before year 2000 (Table 1 and 2).(see section 6.7 for details).
@@ -309,12 +309,18 @@ colnames(coef_table) <- c(
   "Beta", "Std. Error", "p-value",
   "OR", "CI 2.5%", "CI 97.5%"
 )
-
+coef_table <- as.data.frame(coef_table)
 coef_table[, "p-value"] <- ifelse(
   coef_table[, "p-value"] < 0.001,
   "<0.001",
   sprintf("%.3f", coef_table[, "p-value"])
 )
+
+coef_table$Beta        <- sprintf("%.3f", coef_table$Beta)
+coef_table$`Std. Error` <- sprintf("%.3f", coef_table$`Std. Error`)
+coef_table$OR          <- sprintf("%.3f", coef_table$OR)
+coef_table$`CI 2.5%`   <- sprintf("%.3f", coef_table$`CI 2.5%`)
+coef_table$`CI 97.5%`  <- sprintf("%.3f", coef_table$`CI 97.5%`)
 
 # Rename long row names
 rownames(coef_table)[rownames(coef_table) == "building_era1970-2000"] <- "Built 1970–2000"
@@ -342,8 +348,8 @@ A model with an interaction term between occupancy count and a dummy variable fo
 The present analysis shows that the EPC label and the number of occupants are the most relevant predictors of annual electricity consumption. Compared to dwelling in energy class A, lower efficiency classes exhibit progressively higher electricity consumption, from about 7% for class B to nearly 48% for class F. Each additional occupant is responsible for a linear increase in electricity consumption of about 16%.
 
 We should keep in mind the model explains 88% of the variance in the dependent variable, adjusted for the number of predictors.
-The results should be interpreted with caution as the study considers energy consumption in Belgium with no enough information about the date/settings of data collection. The variation in using energy systems between houses was not considered in this analysis, as some people prefer gas and electricity, while others are dependent on electricity only. Furthermore, solar system use may be unmeasured confounder.
-Socioeconomic status may affect energy consumption by using different and less effective home systems to overcome some financial obstacles. These statuses are not included in this model and should be taken into account while interpreting the results.
+The results should be interpreted with caution as the study considers energy consumption in Belgium with no enough information about the date/settings of data collection. The variation in using energy systems between houses was not considered in this analysis, as some people prefer gas and electricity, while others are dependent on electricity only. Furthermore, solar system use may be an unmeasured confounder.
+Socioeconomic status may affect energy consumption by using different and less effective home systems to overcome some financial obstacles. These factors are not included in this model and should be taken into account while interpreting the results.
 From the policy-maker perspective, this study provides a model to predict the energy consumption and will not provide a decision to subsidize structural renovations or not, but may support behavioral interventions. It remains to be established whether encouraging the use of common areas (for example, co-working spaces in the building) will have a substantial impact on total energy demand. The heating and cooling system is a "shared" consumption in a household. This may reduce the contribution of the number of occupants in this model. Finally, it can be included that the energy demand is primarily driven by individual behaviors.
 
 \newpage
@@ -353,16 +359,15 @@ From the policy-maker perspective, this study provides a model to predict the en
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 kable(data_dict, caption = "Data Dictionary") %>%
-  kable_styling(full_width = FALSE, position = "center") %>%
-  column_spec(2, width = "6cm") %>%  
-  column_spec(3, width = "6cm")
+  kable_styling(full_width = FALSE, position = "center")
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-kable(head(data.students[order(-data.students$annual_kwh), ], 10), caption = "Data Orderd") %>%
-  kable_styling(full_width = FALSE, position = "center") %>%
-  column_spec(2, width = "3cm") %>%  
-  column_spec(3, width = "3cm")
+kable(head(data.students[order(-data.students$annual_kwh), ], 10),
+      caption = "Data Ordered",
+      format = "latex",
+      booktabs = TRUE) %>%
+  kable_styling(latex_options = "scale_down", position = "center")
 
 ```
 ## Summary tables for missing values
@@ -424,7 +429,6 @@ kable(pet_summary, caption = "Pet Ownership Distribution") %>% kable_styling()
 kable(occupancy_count, caption = "Occupancy Count Distribution") %>% kable_styling()
 ```
 
-\newpage
 
 ## Summary tables for continuous varibales
 
@@ -918,26 +922,40 @@ kable(coef_table,
 ```
 
 ```{r echo=FALSE, warning=F, message=F}
-
 coef_table <- summary(final_model)$coefficients
 ci <- confint(final_model)
 
 # Combine results
 coef_table <- cbind(coef_table, ci)
 
-
 # Rename columns
 colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value", "CI 2.5%", "CI 97.5%")
 
+# Convert to data frame first
+coef_table <- as.data.frame(coef_table)
+
+# Make sure numeric columns are numeric
+coef_table[, c("Estimate", "Std. Error", "t value", "p-value", "CI 2.5%", "CI 97.5%")] <-
+  lapply(coef_table[, c("Estimate", "Std. Error", "t value", "p-value", "CI 2.5%", "CI 97.5%")], as.numeric)
+
+# Round numeric columns
+coef_table[, c("Estimate", "Std. Error", "t value", "CI 2.5%", "CI 97.5%")] <-
+  lapply(coef_table[, c("Estimate", "Std. Error", "t value", "CI 2.5%", "CI 97.5%")], round, 3)
+
+# Format p-values last
 coef_table[, "p-value"] <- ifelse(
   coef_table[, "p-value"] < 0.001,
   "<0.001",
   sprintf("%.3f", coef_table[, "p-value"])
 )
 
-kable(coef_table,
-      digits = 5,
-      caption = "Regression results for the final model (with 95% CI)")
+# Prevent LaTeX crash
+rownames(coef_table) <- gsub("^\\(Intercept\\)$", "Intercept", rownames(coef_table))
+
+kable(
+  coef_table,
+  caption = "Regression results for the final model (with 95% CI)"
+)
 ```
 ```{r ANOVA Table, echo=FALSE, message=FALSE, warning=FALSE}
 aov<-anova(final_model)
@@ -1023,17 +1041,19 @@ modelincom <- lm(formula = log(annual_kwh) ~ sq_meters + epc_label+ building_era
 kable (vif(modelincom), caption = "VIF result after including the income")
 kable (BIC(modelincom, final_model), caption = "Model godness after inclusing income as a regressor")
 incom<- summary(modelincom)$coefficients
-colnames(incom) <- c("Estimate", "Std. Error", "t value", "p-value")
+# round numeric columns first
+incom[, c("Estimate", "Std. Error", "t value")] <-
+  round(incom[, c("Estimate", "Std. Error", "t value")], 3)
 
-incom[, "p-value"] <- ifelse(
-  incom[, "p-value"] < 0.001,
-  "<0.001",
-  sprintf("%.3f", incom[, "p-value"])
+
+# fix intercept (important for LaTeX)
+rownames(incom) <- gsub("\\(Intercept\\)", "Intercept", rownames(incom))
+
+# print
+kable(
+  incom,
+  caption = "Regression model including income"
 )
-
-kable(incom,
-      digits = 5,
-      caption = "Regression model incluing regressor of income")
 
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -1060,5 +1080,5 @@ kable(coef_table,
 
 # References
 
-Kutner, M. H., Nachtsheim, C. J., Neter, J., & Li, W. (2005). *Applied Linear Statistical Models* (5th ed.). McGraw-Hill/Irwin.
+Kutner, M. H., Nachtsheim, C. J., Neter, J., & Li, W. (2005). *Applied Linear Statistical Models* (5th ed.). McGraw-Hill/Irwin.\
 Thas, O. (2024). *Linear Models* (course notes). Hasselt University.

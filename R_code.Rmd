@@ -496,3 +496,117 @@ plot(full_model.log)
 plot(final_model.log_buil.era)
 par(mfrow = c(1,1))
 ```
+```{r ANOVA Table, echo=FALSE, message=FALSE, warning=FALSE}
+aov<-anova(final_model.log_buil.era)
+kable(aov,
+      digits = 2,
+      caption = "Anova Table ")
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+m.mcp<-glht(final_model.log_buil.era,linfct=mcp(epc_label="Dunnett"))
+
+
+contrast.results <- summary(m.mcp,test=adjusted("BH"))
+ci <- confint(m.mcp)$confint
+
+coef_table_c <- data.frame(
+  "Beta" = contrast.results$test$coefficients,
+  "Std. Error" = contrast.results$test$sigma,
+  "t value" = contrast.results$test$tstat,
+  "p-value" = as.numeric(contrast.results$test$pvalues),
+  LCI_log = ci[, "lwr"],
+  UCI_log = ci[, "upr"]
+)
+#pvalue
+coef_table_c$p.value <- ifelse(
+  coef_table_c$p.value < 0.001,
+  "<0.001",
+  round(coef_table_c$`p.value`, 3)
+)
+
+# Convert estimates to OR
+coef_table_c$OR <- exp(coef_table_c$Beta)
+
+# Transform CI
+coef_table_c$CI_2.5 <- exp(coef_table_c$LCI_log)
+coef_table_c$CI_97.5 <- exp(coef_table_c$UCI_log)
+
+# Rename columns
+table_c <- coef_table_c[, c(
+  "OR",
+  "CI_2.5",
+  "CI_97.5",
+  "p.value"
+)]
+
+kable(table_c,
+      digits = 4,
+      caption = "Contrast results for the EPC Labels")
+```
+```{r echo=FALSE}
+modelincom <- lm(formula = log(annual_kwh) ~ sq_meters + epc_label+ building_era+ occupancy_count +income_euro, 
+    data = df_clean)
+
+kable (vif(modelincom), caption = "VIF result after including the income")
+kable (BIC(modelincom, final_model), caption = "Model godness after inclusing income as a regressor")
+incom<- summary(modelincom)$coefficients
+# round numeric columns first
+incom[, c("Estimate", "Std. Error", "t value")] <-
+  round(incom[, c("Estimate", "Std. Error", "t value")], 3)
+
+
+# fix intercept (important for LaTeX)
+rownames(incom) <- gsub("\\(Intercept\\)", "Intercept", rownames(incom))
+
+# print
+kable(
+  incom,
+  caption = "Regression model including income"
+)
+
+```
+```{r echo=FALSE, warning=F, message=F, include=FALSE, fig.cap= "Occupancy count and energy consumption between high and low EPC rating" }
+df_clean$epc_high <- ifelse(df_clean$epc_label %in% c('A','B'),1,0)
+model_q4<-lm(log(annual_kwh)~occupancy_count*epc_high+sq_meters+building_era,df_clean)
+q4.results <- summary(model_q4)
+
+##corelation per epc group
+by(
+  df_clean,
+  df_clean$epc_high,
+  function(d)
+    cor(
+      as.numeric(d$annual_kwh),
+      as.numeric(d$occupancy_count),
+      use = "complete.obs"
+    )
+)
+ggplot(df_clean,
+       aes(x = occupancy_count, y = annual_kwh)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~epc_high)+
+  labs(
+    title = "EPC B",
+    x = "Occupancy Count",
+    y = "Annual Energy Consumption (kWh)"
+  ) +
+  theme_minimal()
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+q4.results <- summary(model_q4)
+
+coef_table <- as.data.frame(q4.results$coefficients)
+
+colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p-value")
+coef_table[, "p-value"] <- ifelse(
+  coef_table[, "p-value"] < 0.001,
+  "<0.001",
+  sprintf("%.3f", coef_table[, "p-value"])
+)
+
+kable(coef_table,
+      digits = 4,
+      caption = "Results Interaction between EPC Label and Occupancy Count")
+```
